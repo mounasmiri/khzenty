@@ -1,0 +1,23 @@
+# Each package also has its own .gitignore; this covers the repo root.
+
+node_modules/
+dist/
+build/
+
+# Environment files. Only the examples are committed.
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json

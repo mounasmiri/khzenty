@@ -1,0 +1,218 @@
+// Khzenty database schema.
+//
+// Scope: the wardrobe data model only. Authentication credentials are
+// deliberately absent — they arrive with the auth phase.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+/// Broad grouping, used for the wardrobe grid and top-level filters.
+enum ClothingCategory {
+  TOP
+  BOTTOM
+  DRESS
+  OUTERWEAR
+  FOOTWEAR
+  ACCESSORY
+  UNDERWEAR
+  ACTIVEWEAR
+  SLEEPWEAR
+  SWIMWEAR
+}
+
+/// The specific garment. Stored alongside `ClothingCategory` rather than
+/// derived from it, so the two can be filtered independently.
+///
+/// A type implies a category (JEANS is always a BOTTOM), but the database
+/// cannot enforce that pairing. The service layer owns that validation.
+enum ClothingType {
+  // TOP
+  TSHIRT
+  SHIRT
+  BLOUSE
+  SWEATER
+  HOODIE
+  CARDIGAN
+  TANK_TOP
+
+  // BOTTOM
+  JEANS
+  TROUSERS
+  SHORTS
+  SKIRT
+  LEGGINGS
+
+  // DRESS
+  DRESS
+  JUMPSUIT
+
+  // OUTERWEAR
+  JACKET
+  COAT
+  BLAZER
+  VEST
+
+  // FOOTWEAR
+  SNEAKERS
+  BOOTS
+  SANDALS
+  HEELS
+  FLATS
+
+  // ACCESSORY
+  HAT
+  SCARF
+  BELT
+  BAG
+  JEWELRY
+  SUNGLASSES
+  GLOVES
+
+  // UNDERWEAR
+  UNDERWEAR
+  BRA
+  SOCKS
+
+  // ACTIVEWEAR
+  SPORTS_TOP
+  SPORTS_BOTTOM
+
+  // SLEEPWEAR
+  PAJAMAS
+  ROBE
+
+  // SWIMWEAR
+  SWIMSUIT
+
+  /// Escape hatch so capture is never blocked by a missing type.
+  OTHER
+}
+
+/// A garment may suit several seasons, so this is used as a list.
+/// There is no ALL_SEASON member: year-round means all four are selected,
+/// which keeps single-season filters correct without special cases.
+enum Season {
+  SPRING
+  SUMMER
+  AUTUMN
+  WINTER
+}
+
+/// Belongs to `Outfit`, not `ClothingItem`: the same blazer is work-wear in one
+/// combination and formal in another. Occasion is a property of the pairing.
+enum Occasion {
+  CASUAL
+  WORK
+  FORMAL
+  SPORT
+  PARTY
+  TRAVEL
+  HOME
+}
+
+// ---------------------------------------------------------------------------
+// Models
+// ---------------------------------------------------------------------------
+
+model User {
+  id    String  @id @default(cuid())
+  email String  @unique
+  name  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  clothingItems ClothingItem[]
+  outfits       Outfit[]
+}
+
+/// A single garment the user owns.
+model ClothingItem {
+  id String @id @default(cuid())
+
+  /// Owner. Required — a garment with no owner has no meaning.
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// Optional so capture stays fast — a photo plus a category is enough to
+  /// save. The UI falls back to the type when this is empty.
+  name     String?
+  category ClothingCategory
+  type     ClothingType
+
+  /// Human-readable colour name — "White", "Navy", "Olive" — not a hex value.
+  /// Free text, so consistent filtering later depends on a curated picker in
+  /// the UI or normalisation in the service layer.
+  color   String
+  seasons Season[]
+
+  /// Pins a garment to the top of the wardrobe.
+  favorite Boolean @default(false)
+
+  /// Cloudinary. Both are written together by the upload flow. `imagePublicId`
+  /// is the handle Cloudinary needs to delete or transform the asset; without
+  /// it, removing a garment leaks its image.
+  imageUrl      String?
+  imagePublicId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  outfitItems OutfitItem[]
+
+  @@index([userId])
+  /// The wardrobe grid filtered by category is the most common read.
+  @@index([userId, category])
+}
+
+/// A named combination of garments.
+model Outfit {
+  id String @id @default(cuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  name      String
+  occasions Occasion[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  items OutfitItem[]
+
+  @@index([userId])
+}
+
+/// Join table for the many-to-many between `Outfit` and `ClothingItem`.
+///
+/// Modelled explicitly rather than as an implicit Prisma relation so it can
+/// later carry per-outfit data such as layer order or canvas position.
+model OutfitItem {
+  /// Surrogate key, so a membership row can be addressed on its own.
+  id String @id @default(cuid())
+
+  outfitId String
+  outfit   Outfit @relation(fields: [outfitId], references: [id], onDelete: Cascade)
+
+  clothingItemId String
+  clothingItem   ClothingItem @relation(fields: [clothingItemId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  /// Still the natural key: the same garment cannot appear twice in an outfit.
+  /// This also indexes `outfitId` as the leading column, which covers loading
+  /// an outfit's items — no separate index needed for it.
+  @@unique([outfitId, clothingItemId])
+  /// Answers "which outfits use this garment?" before deleting it.
+  @@index([clothingItemId])
+}
