@@ -1,0 +1,15 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["typescript", "oxc", "import", "promise"],
+  "env": {
+    "node": true,
+    "es2023": true
+  },
+  "ignorePatterns": ["dist/**", "src/generated/**"],
+  "rules": {
+    "eqeqeq": "error",
+    "no-var": "error",
+    "prefer-const": "error",
+    "no-throw-literal": "error"
+  }
+}
