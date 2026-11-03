@@ -25,30 +25,47 @@ Toolchain, folder structure, database layer, styling pipeline.
 
 ---
 
-## Phase 1 — Database schema
+## Phase 1 — Database schema ✅
 
-The first real data model. Nothing exists yet, so this unblocks everything.
+The first real data model, and the thing every later phase builds on.
 
-- [ ] Design `User`, `Item`, `Outfit`, and the outfit↔item relation
-- [ ] Decide category and colour representation (enum vs lookup table)
-- [ ] First migration
-- [ ] Seed script with sample data for development
+- [x] Design `User`, `ClothingItem`, `Outfit`, and the `OutfitItem` join
+- [x] Decide category and colour representation — `ClothingCategory` and
+      `ClothingType` are enums; `color` is a human-readable string
+- [x] First migration
+- [x] Seed script with sample data for development
 
-**Open question:** are categories a fixed enum, or user-definable? This affects
-every later query and filter.
+**Settled:** categories are a fixed enum, not user-definable.
+
+**Carried forward:** a garment's `type` implies its `category`, but the database
+cannot enforce the pairing. The service layer needs a validation map when item
+creation is built in Phase 3.
 
 ---
 
-## Phase 2 — Authentication
+## Phase 2 — Authentication ✅
 
-- [ ] Registration and login endpoints
-- [ ] Password hashing (argon2 or bcrypt)
-- [ ] JWT issuing and verification middleware
-- [ ] Token storage strategy on the client
-- [ ] Protected route wrapper in React
+- [x] Registration and login endpoints
+- [x] Password hashing — Argon2id via `@node-rs/argon2`
+- [x] JWT issuing and verification middleware
+- [x] Token storage strategy on the client
+- [x] Protected route wrapper in React
 
-**Open question:** JWT in `localStorage` is simple but XSS-exposed; httpOnly
-cookies are safer but need CSRF handling. Decide before building.
+**Settled:** the session is an httpOnly, `SameSite=Lax` cookie, not a token in
+`localStorage`. JavaScript cannot read it, so XSS cannot steal a session. The
+Vite proxy keeps dev requests same-origin, which is what makes `Lax` sufficient
+without separate CSRF tokens.
+
+**Carried forward:**
+
+- No refresh tokens. The session is a single 7-day access token, so there is no
+  silent renewal — when it expires the user signs in again.
+- A cross-origin production deployment would need `sameSite: 'none'` plus
+  `secure: true`, and at that point CSRF needs revisiting. See
+  `server/src/lib/cookies.ts`.
+- Nothing revokes a token before it expires. Logout clears the cookie, but the
+  token stays valid until `exp`. `requireAuth` re-reads the user on every
+  request, so deleted accounts stop working immediately.
 
 ---
 
