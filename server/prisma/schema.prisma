@@ -28,6 +28,10 @@ enum ClothingCategory {
   ACTIVEWEAR
   SLEEPWEAR
   SWIMWEAR
+
+  /// Pairs with `ClothingType.OTHER`. Without it, the escape-hatch type has no
+  /// category to derive, which would make the taxonomy map non-total.
+  OTHER
 }
 
 /// The specific garment. Stored alongside `ClothingCategory` rather than

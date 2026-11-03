@@ -10,9 +10,9 @@ Built as a portfolio project using a modern full-stack architecture and develope
 
 ## 📌 Status
 
-**Authentication works end to end. The wardrobe itself is next.**
+**The wardrobe works end to end. Photos are next.**
 
-Toolchain, database schema, and auth are built and verified. Signing in gets you a placeholder home screen — no clothing features exist yet.
+Sign in and you can catalogue garments, browse them in a grid, and edit or delete them. Images are the one deliberate gap — the columns exist and are nullable, but nothing uploads yet, so tiles fall back to a type label.
 
 ---
 
@@ -23,13 +23,14 @@ Toolchain, database schema, and auth are built and verified. Signing in gets you
 - Email and password accounts, with Argon2id hashing
 - httpOnly cookie sessions and a protected-route wrapper
 - Wardrobe data model: garments, outfits, and the join between them
+- Garment CRUD, scoped per user, with the category derived from the type
+- Season tagging, favourites (which sort to the top of the grid)
+- Delete confirmation that names how many outfits the garment will leave
 
 **Planned**, roughly in build order:
 
-- Digital wardrobe
-- Clothing management
-- Outfit creation
 - Image upload
+- Outfit creation
 - Occasion collections
 - Recently worn
 - Packing assistant
@@ -51,6 +52,7 @@ Toolchain, database schema, and auth are built and verified. Signing in gets you
 | Tailwind CSS | 4.3 |
 | shadcn/ui | radix base, `nova` preset |
 | React Router | 8.5 |
+| `cn` | 0.5 (class merging) |
 | oxlint | 1.77 |
 
 ### Backend
@@ -152,6 +154,16 @@ That request goes through the Vite dev proxy to the API, so a JSON response conf
 | `POST` | `/api/auth/login` | — | Sign in, sets the session cookie |
 | `POST` | `/api/auth/logout` | — | Clears the cookie, `204` |
 | `GET` | `/api/auth/me` | cookie | The signed-in user |
+| `GET` | `/api/items` | cookie | The user's garments, favourites first |
+| `POST` | `/api/items` | cookie | Create a garment |
+| `GET` | `/api/items/:id` | cookie | One garment, with its outfit count |
+| `PATCH` | `/api/items/:id` | cookie | Update a garment |
+| `DELETE` | `/api/items/:id` | cookie | Delete a garment, `204` |
+| `GET` | `/api/taxonomy` | cookie | Garment types grouped by category |
+
+**Writes take `type`, not `category`.** The server derives the category from the type, so `category: FOOTWEAR` with `type: JEANS` cannot be expressed — a `category` in the request body is ignored rather than trusted. `GET /api/taxonomy` exists so the client's type picker can only offer values the API accepts, instead of duplicating the taxonomy and drifting from it.
+
+Item routes are scoped by `userId`. Updates and deletes filter on `{ id, userId }` and report a count of zero as `404`, so probing another user's item id reveals nothing about whether it exists.
 
 The session is an **httpOnly `SameSite=Lax` cookie**, so JavaScript cannot read it and XSS cannot steal it. Clients must send requests with `credentials: 'include'`; see `client/src/lib/api.ts`.
 
@@ -189,7 +201,7 @@ khzenty/
 │   │   │   └── ui/             # shadcn/ui primitives (generated)
 │   │   ├── features/           # per-feature modules
 │   │   ├── hooks/
-│   │   ├── lib/                # utils, incl. cn()
+│   │   ├── lib/                # api client (cn() comes from the `cn` package)
 │   │   ├── pages/
 │   │   ├── types/
 │   │   ├── App.tsx
@@ -221,6 +233,10 @@ khzenty/
 
 **Errors.** Services throw `HttpError` for failures the client may see. One error middleware turns anything thrown into a consistent JSON shape. Unexpected errors never leak their message; they return a generic 500.
 
+**Ownership.** Every item query takes a `userId` and applies it. `update` and `delete` go through `updateMany`/`deleteMany` filtered on `{ id, userId }` rather than reading the row and comparing, so a missing row and someone else's row are indistinguishable from outside. The seeded `second@khzenty.test` account exists to make a missed scope visible in development.
+
+**Derived state.** A garment's `type` determines its `category`, but the database stores both as independent enum columns and cannot enforce the dependency. `server/src/lib/clothing-taxonomy.ts` is the single place that relationship lives, and writes derive `category` rather than accepting it. Both columns stay populated, so category filtering remains index-backed.
+
 **Configuration.** `server/src/config/env.ts` is the only place that reads `process.env`. It validates with Zod at boot, so a misconfiguration fails immediately and loudly rather than at the first request that needs the value.
 
 **Testability.** `app.ts` builds the Express app without binding a port; `server.ts` owns the port and graceful shutdown. Tests can import the app directly.
@@ -234,7 +250,8 @@ khzenty/
 - [x] Project setup
 - [x] Database schema
 - [x] Authentication
-- [ ] Clothing CRUD
+- [x] Clothing CRUD
+- [ ] Image upload
 - [ ] Outfit Builder
 - [ ] Search & Filters
 - [ ] Occasion Collections
