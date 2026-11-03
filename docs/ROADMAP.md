@@ -69,13 +69,53 @@ without separate CSRF tokens.
 
 ---
 
-## Phase 3 — Clothing CRUD
+## Phase 3 — Clothing CRUD ✅
 
-- [ ] Create, read, update, delete items
+- [x] Create, read, update, delete items
+- [x] Wardrobe grid UI
+- [x] Item detail view
+
+**Settled:** the write API accepts `type` only and the server derives
+`category` from it via `CATEGORY_BY_TYPE` in
+`server/src/lib/clothing-taxonomy.ts`. A mismatched pair — `category: FOOTWEAR`
+with `type: JEANS` — is therefore unrepresentable rather than merely rejected,
+and a `category` sent by a client is ignored. The map is typed as a total
+`Record<ClothingType, ClothingCategory>`, so adding a type without mapping it
+fails to compile.
+
+This also exposed a Phase 1 gap: `ClothingType.OTHER` had no matching category,
+which made the map impossible to complete. `ClothingCategory.OTHER` was added
+in its own migration.
+
+**Ownership:** every item query is scoped by `userId`. `update` and `delete` use
+`updateMany`/`deleteMany` filtered on `{ id, userId }`, and a count of zero
+becomes a 404 — so probing another user's item id reveals nothing about whether
+it exists.
+
+**Carried forward:**
+
+- No pagination. `listItems` returns the user's whole wardrobe, which is fine at
+  current scale; revisit alongside Phase 5 filters.
+- The grid and detail view render without images, since none exist yet — tiles
+  fall back to a type label.
+
+---
+
+## Phase 3b — Images
+
+Split out of Phase 3: it needs Cloudinary credentials and is a self-contained
+pipeline, so bundling it would have blocked the wardrobe on an external account.
+
 - [ ] Cloudinary upload pipeline
 - [ ] Image handling: resize, format, delete-on-remove
-- [ ] Wardrobe grid UI
-- [ ] Item detail view
+
+The columns already exist and are nullable: `ClothingItem.imageUrl` and
+`imagePublicId`. `imagePublicId` is the handle Cloudinary needs to delete an
+asset — without writing it, removing a garment leaks its image.
+
+**Open question:** signed direct-to-Cloudinary upload (no image bytes touch our
+server, but more moving parts) versus a server-side proxy upload (simpler, all
+validation server-side, but every image flows through the API).
 
 ---
 
