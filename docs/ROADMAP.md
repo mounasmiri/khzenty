@@ -164,8 +164,13 @@ exists — suggestions built on assumptions tend to be wrong.
 
 These are real work with no natural home in the sequence above:
 
-- [ ] Testing strategy — none configured yet
-- [ ] CI pipeline
+- [x] Testing strategy — Vitest + Supertest against a separate `khzenty_test`
+      database, covering ownership scoping and category derivation. Verified by
+      mutation, not just by passing.
+- [x] CI pipeline — GitHub Actions: install, typecheck, test, build, with a
+      Postgres service container
+- [ ] Extend coverage beyond the two invariants: auth endpoints, outfits, and
+      the client (no frontend tests exist yet)
 - [ ] Deployment target and process
 - [ ] Error monitoring
 - [ ] Accessibility pass

@@ -1,11 +1,27 @@
 {
-  /* The main tsconfig has rootDir ./src, so files outside it (the seed, the
-     Prisma CLI config) are invisible to `tsc`. This config typechecks them.
-     Files they import from src/ are pulled in automatically. */
+  // The main tsconfig has rootDir ./src, so files outside it (the seed, the
+  // Prisma CLI config, the tests) are invisible to tsc. This config checks
+  // them. Files they import from src/ are pulled in automatically.
+  //
+  // Tests live outside src/ so `npm run build` never compiles them into dist,
+  // but they are typechecked here rather than left unchecked.
+  //
+  // The declaration glob below must be listed explicitly: global declarations
+  // such as the Express req.user augmentation are imported by nothing, so
+  // following imports alone never loads them.
+  //
+  // Line comments, not block comments: a glob containing a star-slash sequence
+  // would close a block comment early and break the file.
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "noEmit": true,
     "rootDir": "."
   },
-  "include": ["prisma/**/*.ts", "prisma.config.ts"]
+  "include": [
+    "prisma/**/*.ts",
+    "prisma.config.ts",
+    "tests/**/*.ts",
+    "vitest.config.ts",
+    "src/**/*.d.ts"
+  ]
 }
