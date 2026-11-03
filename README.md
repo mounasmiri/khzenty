@@ -182,6 +182,7 @@ Run from the repo root:
 | `npm run dev:client` | Start web only |
 | `npm run build` | Build both packages |
 | `npm run typecheck` | Typecheck both packages |
+| `npm test` | Run the server test suite (Vitest + Supertest) |
 | `npm run lint` | Lint both packages (oxlint) |
 | `npm run setup` | Install dependencies in all three packages |
 | `npm run db:generate` | Regenerate the Prisma client |
@@ -242,6 +243,10 @@ khzenty/
 **Testability.** `app.ts` builds the Express app without binding a port; `server.ts` owns the port and graceful shutdown. Tests can import the app directly.
 
 **Styling.** Tailwind v4 is configured in CSS, not JavaScript — see the `@theme inline` block in `client/src/index.css`. There is no `tailwind.config.js`.
+
+**Tests.** Vitest drives the real Express app in-process through Supertest — no port binding, which is why `app.ts` and `server.ts` are separate. They run against a **separate database** (`khzenty_test`), created and migrated automatically on first run; the setup refuses any database whose name doesn't end in `_test`, because the helpers truncate every table. Tests live in `server/tests/` so `npm run build` never compiles them into `dist`, and are typechecked via `tsconfig.scripts.json`.
+
+The suite deliberately targets the invariants that manual testing misses: per-user ownership scoping, and the derived `category`. Both were verified by mutation — removing `userId` from the service's where clauses fails 6 tests, and mis-mapping a garment type fails 3.
 
 ---
 

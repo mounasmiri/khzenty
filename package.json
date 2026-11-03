@@ -2,7 +2,7 @@
   "name": "khzenty",
   "version": "0.1.0",
   "private": true,
-  "description": "Khzenty — a modern wardrobe assistant. Root orchestration scripts.",
+  "description": "Khzenty \u00e2\u20ac\u201d a modern wardrobe assistant. Root orchestration scripts.",
   "license": "MIT",
   "scripts": {
     "dev": "concurrently -n api,web -c blue,magenta \"cd server && npm run dev\" \"cd client && npm run dev\"",
@@ -14,6 +14,8 @@
     "typecheck": "npm run typecheck:server && npm run typecheck:client",
     "typecheck:server": "cd server && npm run typecheck",
     "typecheck:client": "cd client && npm run typecheck",
+    "test": "npm run test:server",
+    "test:server": "cd server && npm test",
     "lint": "npm run lint:server && npm run lint:client",
     "lint:server": "cd server && npm run lint",
     "lint:client": "cd client && npm run lint",
