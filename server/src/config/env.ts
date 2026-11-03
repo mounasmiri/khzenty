@@ -14,6 +14,14 @@ const envSchema = z.object({
   // No default: a wrong-but-present database URL is far easier to debug than
   // a silently missing one.
   DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
+
+  // Deliberately no default. A fallback secret is the kind of thing that ships
+  // to production unnoticed and forges every session.
+  JWT_SECRET: z
+    .string()
+    .min(32, 'JWT_SECRET must be at least 32 characters'),
+  JWT_EXPIRES_IN: z.string().min(1).default('7d'),
+  AUTH_COOKIE_NAME: z.string().min(1).default('khzenty_session'),
 });
 
 const parsed = envSchema.safeParse(process.env);

@@ -1,0 +1,11 @@
+{
+  /* The main tsconfig has rootDir ./src, so files outside it (the seed, the
+     Prisma CLI config) are invisible to `tsc`. This config typechecks them.
+     Files they import from src/ are pulled in automatically. */
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "rootDir": "."
+  },
+  "include": ["prisma/**/*.ts", "prisma.config.ts"]
+}

@@ -10,17 +10,22 @@ Built as a portfolio project using a modern full-stack architecture and develope
 
 ## 📌 Status
 
-**Scaffolding complete — no application features implemented yet.**
+**Authentication works end to end. The wardrobe itself is next.**
 
-The toolchain, folder structure, database layer, and styling pipeline are configured and verified end to end. The only HTTP route that exists is `GET /api/health`, which exists to prove the server boots.
+Toolchain, database schema, and auth are built and verified. Signing in gets you a placeholder home screen — no clothing features exist yet.
 
 ---
 
 ## ✨ Features
 
-None yet. Planned, roughly in build order:
+**Built**
 
-- User authentication
+- Email and password accounts, with Argon2id hashing
+- httpOnly cookie sessions and a protected-route wrapper
+- Wardrobe data model: garments, outfits, and the join between them
+
+**Planned**, roughly in build order:
+
 - Digital wardrobe
 - Clothing management
 - Outfit creation
@@ -45,7 +50,8 @@ None yet. Planned, roughly in build order:
 | TypeScript | 6.0 |
 | Tailwind CSS | 4.3 |
 | shadcn/ui | radix base, `nova` preset |
-| oxlint | 1.75 |
+| React Router | 8.5 |
+| oxlint | 1.77 |
 
 ### Backend
 
@@ -53,9 +59,11 @@ None yet. Planned, roughly in build order:
 | --- | --- |
 | Express | 5.2 |
 | TypeScript | 7.0 |
-| Prisma | 7.9 |
-| PostgreSQL | 14+ |
+| Prisma | 7.10 |
+| PostgreSQL | 17 (via `compose.yaml`) |
 | Zod | 4.4 |
+| Argon2id | `@node-rs/argon2` 2.2 |
+| JWT | `jsonwebtoken` 9.0 |
 
 ### Services
 
@@ -87,9 +95,34 @@ cp server/.env.example server/.env
 cp client/.env.example client/.env.local
 ```
 
-Then edit `server/.env` and point `DATABASE_URL` at your database. The server validates its environment at boot and **exits immediately** with a specific message if anything is missing.
+Then edit `server/.env`:
 
-### 3. Run
+- point `DATABASE_URL` at your database — `compose.yaml` publishes Postgres on **port 5433**, so `docker compose up -d` is enough to match the example
+- set `JWT_SECRET` to a generated value of at least 32 characters:
+
+```bash
+node -e "console.log(require('node:crypto').randomBytes(48).toString('base64url'))"
+```
+
+The server validates its environment at boot and **exits immediately** with a specific message if anything is missing. There is deliberately no fallback `JWT_SECRET`.
+
+### 3. Create the schema and seed data
+
+```bash
+npm run db:migrate
+npm run db:seed
+```
+
+The seed is idempotent and only touches its own accounts, so it is safe to re-run. It creates two users with this password:
+
+| Email | Password |
+| --- | --- |
+| `demo@khzenty.test` | `khzenty-dev-password` |
+| `second@khzenty.test` | `khzenty-dev-password` |
+
+The second account exists so queries that forget to scope by `userId` fail visibly in development.
+
+### 4. Run
 
 ```bash
 npm run dev
@@ -110,6 +143,22 @@ That request goes through the Vite dev proxy to the API, so a JSON response conf
 
 ---
 
+## 🔐 API
+
+| Method | Path | Auth | Description |
+| --- | --- | --- | --- |
+| `GET` | `/api/health` | — | Liveness check |
+| `POST` | `/api/auth/register` | — | Create an account, returns `201` and signs in |
+| `POST` | `/api/auth/login` | — | Sign in, sets the session cookie |
+| `POST` | `/api/auth/logout` | — | Clears the cookie, `204` |
+| `GET` | `/api/auth/me` | cookie | The signed-in user |
+
+The session is an **httpOnly `SameSite=Lax` cookie**, so JavaScript cannot read it and XSS cannot steal it. Clients must send requests with `credentials: 'include'`; see `client/src/lib/api.ts`.
+
+Login returns the same `401 Invalid email or password` whether the email is unknown or the password is wrong, and verifies against a dummy hash when no user matches, so neither the message nor the response time reveals which emails are registered.
+
+---
+
 ## 📜 Scripts
 
 Run from the repo root:
@@ -125,6 +174,7 @@ Run from the repo root:
 | `npm run setup` | Install dependencies in all three packages |
 | `npm run db:generate` | Regenerate the Prisma client |
 | `npm run db:migrate` | Create and apply a migration |
+| `npm run db:seed` | Load development data (idempotent) |
 | `npm run db:studio` | Open Prisma Studio |
 
 ---
@@ -182,8 +232,8 @@ khzenty/
 ## 🗺️ Roadmap
 
 - [x] Project setup
-- [ ] Database schema
-- [ ] Authentication
+- [x] Database schema
+- [x] Authentication
 - [ ] Clothing CRUD
 - [ ] Outfit Builder
 - [ ] Search & Filters
