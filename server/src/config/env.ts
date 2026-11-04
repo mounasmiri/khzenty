@@ -22,6 +22,20 @@ const envSchema = z.object({
     .min(32, 'JWT_SECRET must be at least 32 characters'),
   JWT_EXPIRES_IN: z.string().min(1).default('7d'),
   AUTH_COOKIE_NAME: z.string().min(1).default('khzenty_session'),
+
+  // Optional on purpose. Requiring them would stop the server booting for
+  // anyone without a Cloudinary account — including CI. Image upload instead
+  // reports 503 while unconfigured; see `isCloudinaryConfigured`.
+  CLOUDINARY_CLOUD_NAME: z.string().min(1).optional(),
+  CLOUDINARY_API_KEY: z.string().min(1).optional(),
+  CLOUDINARY_API_SECRET: z.string().min(1).optional(),
+
+  /** Root folder for uploads; each user gets `<root>/users/<userId>`. */
+  CLOUDINARY_FOLDER: z.string().min(1).default('khzenty'),
+  /** Enforced after upload, by reading the asset's real byte count. */
+  CLOUDINARY_MAX_BYTES: z.coerce.number().int().positive().default(10 * 1024 * 1024),
+  /** Signed into the upload request, so the client cannot widen it. */
+  CLOUDINARY_ALLOWED_FORMATS: z.string().min(1).default('jpg,jpeg,png,webp,avif'),
 });
 
 const parsed = envSchema.safeParse(process.env);

@@ -160,6 +160,14 @@ That request goes through the Vite dev proxy to the API, so a JSON response conf
 | `PATCH` | `/api/items/:id` | cookie | Update a garment |
 | `DELETE` | `/api/items/:id` | cookie | Delete a garment, `204` |
 | `GET` | `/api/taxonomy` | cookie | Garment types grouped by category |
+| `POST` | `/api/uploads/signature` | cookie | Short-lived signature for a direct browser upload |
+| `PUT` | `/api/items/:id/image` | cookie | Attach an already-uploaded image to an item |
+
+**Image upload is signed and direct.** The browser asks for a signature, uploads straight to Cloudinary, then posts back only the `publicId`. Image bytes never pass through this server, so there is no multipart handling and no upload bandwidth cost.
+
+The signature covers `folder` and `allowed_formats`, so changing either client-side invalidates it — that is what confines a user to `khzenty/users/<their id>` and to formats we accept. Cloudinary's upload API has **no signable max-size parameter**, so size is enforced afterwards: the confirm step reads the asset's real byte count and format from Cloudinary, deletes anything that violates the limits, and only then records the URL. Nothing the client reports about the file is trusted.
+
+Credentials are optional — without them the server still boots and these two endpoints return `503`.
 
 **Writes take `type`, not `category`.** The server derives the category from the type, so `category: FOOTWEAR` with `type: JEANS` cannot be expressed — a `category` in the request body is ignored rather than trusted. `GET /api/taxonomy` exists so the client's type picker can only offer values the API accepts, instead of duplicating the taxonomy and drifting from it.
 
