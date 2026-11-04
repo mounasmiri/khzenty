@@ -14,20 +14,35 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { ApiError } from '@/lib/api';
+import { ImagePicker } from './image-picker';
 import { labelFor } from './labels';
 import type { ClothingItem, ClothingItemInput } from './types';
 import { SEASONS } from './types';
+import { UploadError, uploadItemImage } from './upload';
+import type { UploadStage } from './upload';
 import { useTaxonomy } from './use-wardrobe';
 
 interface ItemFormProps {
   /** Present when editing; absent when creating. */
   item?: ClothingItem;
   submitLabel: string;
-  onSubmit: (input: ClothingItemInput) => Promise<void>;
+  /** Saves the item and resolves with it, so the photo can be attached to it. */
+  onSubmit: (input: ClothingItemInput) => Promise<ClothingItem>;
+  /** Called once the item — and its photo, if any — are stored. */
+  onDone: (item: ClothingItem) => void;
   onCancel: () => void;
 }
 
-export function ItemForm({ item, submitLabel, onSubmit, onCancel }: ItemFormProps) {
+type Phase = 'editing' | 'saving' | UploadStage | 'photo-failed';
+
+const PHASE_LABEL: Record<string, string> = {
+  saving: 'Saving…',
+  signing: 'Preparing upload…',
+  uploading: 'Uploading photo…',
+  confirming: 'Finishing up…',
+};
+
+export function ItemForm({ item, submitLabel, onSubmit, onDone, onCancel }: ItemFormProps) {
   const taxonomy = useTaxonomy();
 
   const [type, setType] = useState(item?.type ?? '');
@@ -35,13 +50,36 @@ export function ItemForm({ item, submitLabel, onSubmit, onCancel }: ItemFormProp
   const [name, setName] = useState(item?.name ?? '');
   const [seasons, setSeasons] = useState<string[]>(item?.seasons ?? []);
   const [favorite, setFavorite] = useState(item?.favorite ?? false);
+  const [file, setFile] = useState<File | null>(null);
+
+  const [phase, setPhase] = useState<Phase>('editing');
   const [error, setError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
+  /** Set once the item itself is stored, so a failed photo is not a lost item. */
+  const [savedItem, setSavedItem] = useState<ClothingItem | null>(null);
+
+  const busy = phase !== 'editing' && phase !== 'photo-failed';
 
   function toggleSeason(season: string) {
     setSeasons((current) =>
       current.includes(season) ? current.filter((s) => s !== season) : [...current, season],
     );
+  }
+
+  /** Shared by the initial submit and the "try the photo again" button. */
+  async function attachPhoto(target: ClothingItem, chosen: File) {
+    try {
+      await uploadItemImage(target.id, chosen, (stage) => setPhase(stage));
+      onDone(target);
+    } catch (caught) {
+      // The item is already saved at this point, so this is a partial success
+      // and must not read like a lost garment.
+      setPhase('photo-failed');
+      setError(
+        caught instanceof UploadError || caught instanceof ApiError
+          ? caught.message
+          : 'The photo could not be uploaded.',
+      );
+    }
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -53,10 +91,12 @@ export function ItemForm({ item, submitLabel, onSubmit, onCancel }: ItemFormProp
       return;
     }
 
-    setSubmitting(true);
+    setPhase('saving');
+
+    let saved: ClothingItem;
 
     try {
-      await onSubmit({
+      saved = await onSubmit({
         type,
         color: color.trim(),
         // null clears an existing name; the server treats absent as unchanged.
@@ -65,16 +105,57 @@ export function ItemForm({ item, submitLabel, onSubmit, onCancel }: ItemFormProp
         favorite,
       });
     } catch (caught) {
+      setPhase('editing');
       setError(caught instanceof ApiError ? caught.message : 'Could not save the item.');
-      setSubmitting(false);
+      return;
     }
+
+    setSavedItem(saved);
+
+    if (!file) {
+      onDone(saved);
+      return;
+    }
+
+    await attachPhoto(saved, file);
+  }
+
+  // The item exists but its photo did not land. Offer a retry and a way out,
+  // rather than stranding the user on a form whose data is already stored.
+  if (phase === 'photo-failed' && savedItem) {
+    return (
+      <div className="flex max-w-md flex-col gap-4">
+        <div className="rounded-lg border p-4">
+          <p className="text-sm font-medium">The item was saved, but the photo was not.</p>
+          <p role="alert" className="text-destructive mt-1 text-sm">
+            {error}
+          </p>
+        </div>
+
+        <div className="flex gap-2">
+          <Button
+            type="button"
+            onClick={() => {
+              if (!file) return;
+              setError(null);
+              void attachPhoto(savedItem, file);
+            }}
+          >
+            Try the photo again
+          </Button>
+          <Button type="button" variant="outline" onClick={() => onDone(savedItem)}>
+            Continue without it
+          </Button>
+        </div>
+      </div>
+    );
   }
 
   return (
     <form onSubmit={handleSubmit} className="flex max-w-md flex-col gap-4" noValidate>
       <div className="flex flex-col gap-2">
         <Label htmlFor="type">Type</Label>
-        <Select value={type} onValueChange={setType}>
+        <Select value={type} onValueChange={setType} disabled={busy}>
           <SelectTrigger id="type">
             <SelectValue placeholder={taxonomy ? 'Choose a type' : 'Loading…'} />
           </SelectTrigger>
@@ -105,6 +186,7 @@ export function ItemForm({ item, submitLabel, onSubmit, onCancel }: ItemFormProp
           required
           placeholder="Navy"
           value={color}
+          disabled={busy}
           onChange={(event) => setColor(event.target.value)}
         />
       </div>
@@ -115,11 +197,20 @@ export function ItemForm({ item, submitLabel, onSubmit, onCancel }: ItemFormProp
           id="name"
           placeholder="Falls back to the type"
           value={name}
+          disabled={busy}
           onChange={(event) => setName(event.target.value)}
         />
       </div>
 
-      <fieldset className="flex flex-col gap-2">
+      <ImagePicker
+        existingUrl={item?.imageUrl ?? null}
+        file={file}
+        onSelect={setFile}
+        disabled={busy}
+        placeholder={type ? labelFor(type) : 'No photo'}
+      />
+
+      <fieldset className="flex flex-col gap-2" disabled={busy}>
         <legend className="mb-2 text-sm font-medium">Seasons</legend>
         <div className="flex flex-wrap gap-2">
           {SEASONS.map((season) => (
@@ -135,15 +226,14 @@ export function ItemForm({ item, submitLabel, onSubmit, onCancel }: ItemFormProp
             </Button>
           ))}
         </div>
-        <p className="text-muted-foreground text-xs">
-          Year-round means selecting all four.
-        </p>
+        <p className="text-muted-foreground text-xs">Year-round means selecting all four.</p>
       </fieldset>
 
       <label className="flex items-center gap-2 text-sm">
         <input
           type="checkbox"
           checked={favorite}
+          disabled={busy}
           onChange={(event) => setFavorite(event.target.checked)}
         />
         Favourite
@@ -155,13 +245,17 @@ export function ItemForm({ item, submitLabel, onSubmit, onCancel }: ItemFormProp
         </p>
       ) : null}
 
-      <div className="flex gap-2">
-        <Button type="submit" disabled={submitting}>
-          {submitting ? 'Saving…' : submitLabel}
+      <div className="flex items-center gap-2">
+        <Button type="submit" disabled={busy}>
+          {busy ? (PHASE_LABEL[phase] ?? 'Working…') : submitLabel}
         </Button>
-        <Button type="button" variant="ghost" onClick={onCancel}>
+        <Button type="button" variant="ghost" disabled={busy} onClick={onCancel}>
           Cancel
         </Button>
+        {/* aria-live so the stage change is announced, not just shown. */}
+        <span aria-live="polite" className="text-muted-foreground text-xs">
+          {busy ? PHASE_LABEL[phase] : ''}
+        </span>
       </div>
     </form>
   );

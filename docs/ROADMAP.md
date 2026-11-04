@@ -126,8 +126,22 @@ anything the client reports.
 any clone without a Cloudinary account, including CI, so the endpoints return
 503 while unconfigured and the rest of the wardrobe keeps working.
 
-**Frontend not wired yet.** The two endpoints exist and are tested, but no UI
-calls them — the wardrobe grid still renders type-label placeholders.
+- [x] Upload UI — pick a photo in the add/edit form, with a local preview,
+      staged progress, and error messages. The grid and detail view show the
+      image, falling back to the type label.
+
+**Blocked on a Cloudinary key permission.** The signature is correct — proved by
+Cloudinary echoing its own string-to-sign on a deliberately tampered attempt,
+which matched ours exactly. A *correct* signature returns
+`403 missing permissions (actions=["create"])`, so the API key in use can read
+(`ping` succeeds) but cannot upload. Needs a key with the create/upload action
+enabled; no code change.
+
+**Create saves before uploading.** The confirm endpoint addresses an item by id,
+which does not exist until the item is created, so the form saves first and then
+attaches the photo. That makes "saved, but the photo failed" a real state, and
+the form reports it as such with a retry rather than pretending the garment was
+lost.
 
 ---
 

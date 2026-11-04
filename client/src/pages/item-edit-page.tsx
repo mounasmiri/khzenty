@@ -29,10 +29,8 @@ export function ItemEditPage() {
         item={item}
         submitLabel="Save changes"
         onCancel={() => void navigate(`/items/${item.id}`)}
-        onSubmit={async (input) => {
-          await clothingApi.update(item.id, input);
-          void navigate(`/items/${item.id}`, { replace: true });
-        }}
+        onSubmit={(input) => clothingApi.update(item.id, input)}
+        onDone={(saved) => void navigate(`/items/${saved.id}`, { replace: true })}
       />
     </section>
   );
