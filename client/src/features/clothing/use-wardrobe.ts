@@ -27,7 +27,17 @@ export function useWardrobe() {
     void reload();
   }, [reload]);
 
-  return { items, error, reload };
+  /**
+   * Swaps one garment in place after a mutation, so a status change does not
+   * cost a full refetch and does not reshuffle the grid under the user.
+   */
+  const replaceItem = useCallback((updated: ClothingItem) => {
+    setItems((current) =>
+      current ? current.map((item) => (item.id === updated.id ? updated : item)) : current,
+    );
+  }, []);
+
+  return { items, error, reload, replaceItem };
 }
 
 /** A single garment, by id. */
