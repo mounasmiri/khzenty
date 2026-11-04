@@ -20,6 +20,8 @@ const ITEM_SELECT = {
   color: true,
   seasons: true,
   favorite: true,
+  laundryStatus: true,
+  laundryAt: true,
   imageUrl: true,
   createdAt: true,
   updatedAt: true,
