@@ -5,7 +5,9 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { clothingApi } from '@/features/clothing/api';
 import { labelFor } from '@/features/clothing/labels';
-import { UNSORTED_COLOR_LABEL } from '@/features/clothing/types';
+import { LaundryToggle } from '@/features/clothing/laundry-toggle';
+import type { LaundryStatus } from '@/features/clothing/types';
+import { LAUNDRY_LABEL, UNSORTED_COLOR_LABEL } from '@/features/clothing/types';
 import { useClothingItem } from '@/features/clothing/use-wardrobe';
 import { ApiError } from '@/lib/api';
 
@@ -20,6 +22,8 @@ export function ItemDetailPage() {
   const [confirmingPhotoRemoval, setConfirmingPhotoRemoval] = useState(false);
   const [removingPhoto, setRemovingPhoto] = useState(false);
   const [photoError, setPhotoError] = useState<string | null>(null);
+  const [laundryStatus, setLaundryStatus] = useState<LaundryStatus | undefined>(undefined);
+  const [laundryError, setLaundryError] = useState<string | null>(null);
 
   if (loading) {
     return <p className="text-muted-foreground text-sm">Loading…</p>;
@@ -39,6 +43,8 @@ export function ItemDetailPage() {
   }
 
   const outfitCount = item._count.outfitItems;
+  // `undefined` means "not changed here", so the fetched value is used.
+  const shownStatus = laundryStatus ?? item.laundryStatus;
   // `undefined` means "not touched here", so the fetched value is used.
   const shownImageUrl = imageUrl === undefined ? item.imageUrl : imageUrl;
 
@@ -151,6 +157,36 @@ export function ItemDetailPage() {
               Remove photo
             </Button>
           )
+        ) : null}
+      </div>
+
+      <div className="flex flex-col gap-2 rounded-lg border p-4">
+        <div className="flex items-center gap-2">
+          <p className="text-sm font-medium">Laundry</p>
+          {shownStatus === 'IN_LAUNDRY' ? (
+            <Badge variant="secondary">{LAUNDRY_LABEL.IN_LAUNDRY}</Badge>
+          ) : null}
+        </div>
+        <LaundryToggle
+          status={shownStatus}
+          size="default"
+          onChange={async (next) => {
+            setLaundryError(null);
+
+            try {
+              const updated = await clothingApi.setLaundryStatus(item!.id, next);
+              setLaundryStatus(updated.laundryStatus);
+            } catch (caught) {
+              setLaundryError(
+                caught instanceof ApiError ? caught.message : 'Could not change the status.',
+              );
+            }
+          }}
+        />
+        {laundryError ? (
+          <p role="alert" className="text-destructive text-sm">
+            {laundryError}
+          </p>
         ) : null}
       </div>
 

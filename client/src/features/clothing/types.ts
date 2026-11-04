@@ -2,6 +2,14 @@
 /** Shown wherever a garment has no colour set yet. */
 export const UNSORTED_COLOR_LABEL = 'Unsorted';
 
+/** Mirrors the server's `LaundryStatus` enum. */
+export type LaundryStatus = 'CLEAN' | 'IN_LAUNDRY';
+
+export const LAUNDRY_LABEL: Record<LaundryStatus, string> = {
+  CLEAN: 'Clean',
+  IN_LAUNDRY: 'In laundry',
+};
+
 export interface ClothingItem {
   id: string;
   name: string | null;
@@ -11,6 +19,9 @@ export interface ClothingItem {
   color: string | null;
   seasons: string[];
   favorite: boolean;
+  laundryStatus: LaundryStatus;
+  /** When the status last changed; null until it is first set. */
+  laundryAt: string | null;
   imageUrl: string | null;
   createdAt: string;
   updatedAt: string;

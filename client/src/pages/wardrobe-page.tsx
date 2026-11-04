@@ -1,12 +1,31 @@
+import { useState } from 'react';
 import { Link } from 'react-router';
 
 import { Button } from '@/components/ui/button';
+import { clothingApi } from '@/features/clothing/api';
 import { ItemCard } from '@/features/clothing/item-card';
 import { labelFor } from '@/features/clothing/labels';
+import type { LaundryStatus } from '@/features/clothing/types';
 import { useWardrobe } from '@/features/clothing/use-wardrobe';
+import { ApiError } from '@/lib/api';
 
 export function WardrobePage() {
-  const { items, error } = useWardrobe();
+  const { items, error, replaceItem } = useWardrobe();
+  const [laundryError, setLaundryError] = useState<string | null>(null);
+
+  async function changeLaundry(id: string, status: LaundryStatus) {
+    setLaundryError(null);
+
+    try {
+      // Swapped in place rather than refetched, so the grid does not reshuffle
+      // under the user mid-tap.
+      replaceItem(await clothingApi.setLaundryStatus(id, status));
+    } catch (caught) {
+      setLaundryError(
+        caught instanceof ApiError ? caught.message : 'Could not change the status.',
+      );
+    }
+  }
 
   return (
     <section className="flex flex-col gap-6">
@@ -31,9 +50,9 @@ export function WardrobePage() {
         </div>
       </div>
 
-      {error ? (
+      {error ?? laundryError ? (
         <p role="alert" className="text-destructive text-sm">
-          {error}
+          {error ?? laundryError}
         </p>
       ) : null}
 
@@ -55,7 +74,7 @@ export function WardrobePage() {
           {/* Favourites sort first server-side, so no client ordering here. */}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
             {items.map((item) => (
-              <ItemCard key={item.id} item={item} />
+              <ItemCard key={item.id} item={item} onLaundryChange={changeLaundry} />
             ))}
           </div>
 

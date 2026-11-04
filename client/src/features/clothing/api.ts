@@ -1,5 +1,5 @@
 import { api } from '@/lib/api';
-import type { ClothingItem, ClothingItemInput, TaxonomyGroup } from './types';
+import type { ClothingItem, ClothingItemInput, LaundryStatus, TaxonomyGroup } from './types';
 
 export const clothingApi = {
   list: () => api.get<{ items: ClothingItem[] }>('/items').then((r) => r.items),
@@ -25,4 +25,13 @@ export const clothingApi = {
       .then((r) => r.item),
 
   taxonomy: () => api.get<{ taxonomy: TaxonomyGroup[] }>('/taxonomy').then((r) => r.taxonomy),
+
+  setLaundryStatus: (id: string, status: LaundryStatus) =>
+    api
+      .patch<{ item: ClothingItem }>(`/items/${encodeURIComponent(id)}/laundry`, { status })
+      .then((r) => r.item),
+
+  /** Resolves with how many garments actually moved; foreign ids are skipped. */
+  markWashed: (ids: string[]) =>
+    api.post<{ updated: number }>('/items/laundry/washed', { ids }).then((r) => r.updated),
 };
