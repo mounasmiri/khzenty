@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { clothingApi } from '@/features/clothing/api';
 import { labelFor } from '@/features/clothing/labels';
+import { UNSORTED_COLOR_LABEL } from '@/features/clothing/types';
 import { useClothingItem } from '@/features/clothing/use-wardrobe';
 import { ApiError } from '@/lib/api';
 
@@ -74,7 +75,13 @@ export function ItemDetailPage() {
           <h1 className="text-2xl font-semibold tracking-tight">
             {item.name ?? labelFor(item.type)}
           </h1>
-          <p className="text-muted-foreground text-sm">{item.color}</p>
+          {item.color ? (
+            <p className="text-muted-foreground text-sm">{item.color}</p>
+          ) : (
+            <Badge variant="outline" className="mt-1">
+              {UNSORTED_COLOR_LABEL}
+            </Badge>
+          )}
         </div>
 
         <div className="flex gap-2">

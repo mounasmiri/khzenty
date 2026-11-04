@@ -1,13 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router';
 
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { clothingApi } from '@/features/clothing/api';
-import { DRAFT_COLOR, DRAFT_TYPE } from '@/features/clothing/drafts';
+import { DRAFT_TYPE } from '@/features/clothing/drafts';
 import { labelFor } from '@/features/clothing/labels';
 import type { ClothingItem } from '@/features/clothing/types';
+import { UNSORTED_COLOR_LABEL } from '@/features/clothing/types';
 import { useTaxonomy } from '@/features/clothing/use-wardrobe';
 import { ApiError } from '@/lib/api';
 
@@ -19,7 +21,7 @@ interface SortState {
 interface HistoryEntry {
   item: ClothingItem;
   previousType: string;
-  previousColor: string;
+  previousColor: string | null;
 }
 
 /**
@@ -208,10 +210,13 @@ export function QuickSortPage() {
       </div>
 
       <div className="flex max-w-md flex-col gap-2">
-        <Label htmlFor="sort-color">Colour (optional)</Label>
+        <div className="flex items-center gap-2">
+          <Label htmlFor="sort-color">Colour (optional)</Label>
+          {current.color ? null : <Badge variant="outline">{UNSORTED_COLOR_LABEL}</Badge>}
+        </div>
         <Input
           id="sort-color"
-          placeholder={current.color === DRAFT_COLOR ? 'Navy' : current.color}
+          placeholder={current.color ?? 'Navy'}
           value={color}
           disabled={saving}
           onChange={(event) => setColor(event.target.value)}

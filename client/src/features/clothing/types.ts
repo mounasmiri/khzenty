@@ -1,10 +1,14 @@
 /** Mirrors the server's `ITEM_SELECT` projection. */
+/** Shown wherever a garment has no colour set yet. */
+export const UNSORTED_COLOR_LABEL = 'Unsorted';
+
 export interface ClothingItem {
   id: string;
   name: string | null;
   category: string;
   type: string;
-  color: string;
+  /** Null means "not set yet", not "colourless". */
+  color: string | null;
   seasons: string[];
   favorite: boolean;
   imageUrl: string | null;
@@ -23,7 +27,8 @@ export interface TaxonomyGroup {
 /** `category` is absent by design: the server derives it from `type`. */
 export interface ClothingItemInput {
   type: string;
-  color: string;
+  /** Omit or send null to leave it unset; an empty string is rejected. */
+  color?: string | null;
   name?: string | null;
   seasons?: string[];
   favorite?: boolean;

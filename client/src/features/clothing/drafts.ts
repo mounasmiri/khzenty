@@ -6,16 +6,13 @@ import { UploadError, uploadItemImage } from './upload';
 import type { UploadStage } from './upload';
 
 /**
- * A photo-first garment starts as a draft: the type is the escape-hatch value
- * and the colour a visible placeholder, both meant to be replaced on the
- * quick-sort screen.
+ * A photo-first garment starts as a draft: the escape-hatch type and no colour
+ * at all, both meant to be filled in on the quick-sort screen.
  *
- * `color` is required by the API, so a draft cannot simply omit it. A sentinel
- * is the trade-off for not making the column nullable, and it reads as
- * unfinished in the wardrobe rather than looking like a real colour.
+ * The colour is genuinely absent rather than a sentinel string — the column is
+ * nullable, so there is no need to write a non-colour into it.
  */
 export const DRAFT_TYPE = 'OTHER';
-export const DRAFT_COLOR = 'Unsorted';
 
 /** Stages worth reporting, including the client-side work before upload. */
 export type DraftStage = 'compressing' | UploadStage;
@@ -52,7 +49,8 @@ export async function createDraftFromPhoto(
   onStage?.('compressing');
   const compressed = await compressImage(file);
 
-  const item = await clothingApi.create({ type: DRAFT_TYPE, color: DRAFT_COLOR });
+  // No colour: the quick-sort screen collects it, and null reads as unset.
+  const item = await clothingApi.create({ type: DRAFT_TYPE });
 
   try {
     await uploadItemImage(item.id, compressed, (stage) => onStage?.(stage));

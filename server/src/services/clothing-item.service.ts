@@ -63,7 +63,8 @@ export function createItem(userId: string, input: CreateClothingItemInput) {
       // Derived, never taken from the client.
       category: categoryForType(input.type),
       type: input.type,
-      color: input.color,
+      // Absent and null both mean "not set yet".
+      color: input.color ?? null,
       name: input.name ?? null,
       seasons: input.seasons ?? [],
       favorite: input.favorite ?? false,

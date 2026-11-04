@@ -11,8 +11,11 @@ const seasonsField = z.array(z.enum(Season)).max(4);
  */
 export const createClothingItemSchema = z.object({
   type: clothingTypeField,
-  // Human-readable colour name, not a hex value.
-  color: z.string().trim().min(1, 'Colour is required').max(40),
+  // Human-readable colour name, not a hex value. Optional and nullable so a
+  // photo-only capture is not blocked on typing one; absent and null both mean
+  // "not set yet". An empty string is still rejected — send null instead, so a
+  // blank field cannot masquerade as a colour.
+  color: z.string().trim().min(1).max(40).nullable().optional(),
   // Optional so capture stays fast; the UI falls back to the type.
   name: z.string().trim().min(1).max(120).optional(),
   seasons: seasonsField.optional(),
@@ -26,7 +29,8 @@ export const createClothingItemSchema = z.object({
 export const updateClothingItemSchema = z
   .object({
     type: clothingTypeField.optional(),
-    color: z.string().trim().min(1).max(40).optional(),
+    // Nullable as well as optional: null clears the colour, absent leaves it.
+    color: z.string().trim().min(1).max(40).nullable().optional(),
     // Nullable as well as optional: null clears the name, absent leaves it.
     name: z.string().trim().min(1).max(120).nullable().optional(),
     seasons: seasonsField.optional(),

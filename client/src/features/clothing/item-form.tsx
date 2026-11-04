@@ -18,7 +18,7 @@ import { clothingApi } from './api';
 import { ImagePicker } from './image-picker';
 import { labelFor } from './labels';
 import type { ClothingItem, ClothingItemInput } from './types';
-import { SEASONS } from './types';
+import { SEASONS, UNSORTED_COLOR_LABEL } from './types';
 import { UploadError, uploadItemImage } from './upload';
 import type { UploadStage } from './upload';
 import { useTaxonomy } from './use-wardrobe';
@@ -101,8 +101,9 @@ export function ItemForm({ item, submitLabel, onSubmit, onDone, onCancel }: Item
     try {
       saved = await onSubmit({
         type,
-        color: color.trim(),
-        // null clears an existing name; the server treats absent as unchanged.
+        // null clears, so a blanked field genuinely unsets the value. An empty
+        // string would be rejected rather than treated as "none".
+        color: color.trim().length > 0 ? color.trim() : null,
         name: name.trim().length > 0 ? name.trim() : null,
         seasons,
         favorite,
@@ -183,15 +184,17 @@ export function ItemForm({ item, submitLabel, onSubmit, onDone, onCancel }: Item
       </div>
 
       <div className="flex flex-col gap-2">
-        <Label htmlFor="color">Colour</Label>
+        <Label htmlFor="color">Colour (optional)</Label>
         <Input
           id="color"
-          required
           placeholder="Navy"
           value={color}
           disabled={busy}
           onChange={(event) => setColor(event.target.value)}
         />
+        <p className="text-muted-foreground text-xs">
+          Leave blank to mark it {UNSORTED_COLOR_LABEL.toLowerCase()}.
+        </p>
       </div>
 
       <div className="flex flex-col gap-2">

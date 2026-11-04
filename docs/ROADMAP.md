@@ -31,7 +31,8 @@ The first real data model, and the thing every later phase builds on.
 
 - [x] Design `User`, `ClothingItem`, `Outfit`, and the `OutfitItem` join
 - [x] Decide category and colour representation — `ClothingCategory` and
-      `ClothingType` are enums; `color` is a human-readable string
+      `ClothingType` are enums; `color` is a nullable human-readable string
+      (made nullable later, so a photo-only capture need not supply one)
 - [x] First migration
 - [x] Seed script with sample data for development
 
@@ -136,10 +137,10 @@ any clone without a Cloudinary account, including CI, so the endpoints return
       for assigning types afterwards. Photos are resized to 1200px in the
       browser first.
 
-**Drafts carry a sentinel colour.** `color` is required by the API, so a
-photo-only garment cannot omit it; drafts are created as type `OTHER` with
-colour `Unsorted`. Making the column nullable is the cleaner fix and is still
-open — see the colour/name asymmetry noted below.
+**Drafts have no colour at all.** `ClothingItem.color` is nullable, so a
+photo-only garment simply omits it and the UI shows an Unsorted badge. This
+replaced an earlier sentinel string that wrote a non-colour into the colour
+column.
 
 **Blocked on a Cloudinary key permission.** The signature is correct — proved by
 Cloudinary echoing its own string-to-sign on a deliberately tampered attempt,

@@ -3,6 +3,7 @@ import { Link } from 'react-router';
 import { Badge } from '@/components/ui/badge';
 import { labelFor } from './labels';
 import type { ClothingItem } from './types';
+import { UNSORTED_COLOR_LABEL } from './types';
 
 /**
  * One garment in the wardrobe grid. `name` is optional on the server, so the
@@ -38,7 +39,15 @@ export function ItemCard({ item }: { item: ClothingItem }) {
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="truncate text-sm font-medium">{item.name ?? labelFor(item.type)}</p>
-          <p className="text-muted-foreground truncate text-xs">{item.color}</p>
+          {item.color ? (
+            <p className="text-muted-foreground truncate text-xs">{item.color}</p>
+          ) : (
+            // A badge rather than blank space: an unset colour is a thing to
+            // finish, not an absence to overlook.
+            <Badge variant="outline" className="mt-0.5 text-[10px]">
+              {UNSORTED_COLOR_LABEL}
+            </Badge>
+          )}
         </div>
         {item.favorite ? (
           <span className="text-xs" aria-label="Favourite" title="Favourite">
