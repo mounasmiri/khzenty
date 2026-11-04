@@ -102,6 +102,16 @@ enum ClothingType {
   OTHER
 }
 
+/// Whether a garment is available to wear.
+///
+/// An enum rather than a boolean: "in the wash" is one of several states a
+/// garment can be unavailable for, and adding DRYING or NEEDS_REPAIR later is
+/// then a migration rather than a redesign.
+enum LaundryStatus {
+  CLEAN
+  IN_LAUNDRY
+}
+
 /// A garment may suit several seasons, so this is used as a list.
 /// There is no ALL_SEASON member: year-round means all four are selected,
 /// which keeps single-season filters correct without special cases.
@@ -171,6 +181,15 @@ model ClothingItem {
 
   /// Pins a garment to the top of the wardrobe.
   favorite Boolean @default(false)
+
+  /// Manual, never inferred: the app has no way to know a garment is in the
+  /// wash. Defaults to CLEAN so every existing garment stays wearable.
+  laundryStatus LaundryStatus @default(CLEAN)
+
+  /// When `laundryStatus` last changed, so the basket can show how long
+  /// something has been sitting there. Null until the status is first set,
+  /// which is why it is nullable rather than defaulting to now().
+  laundryAt DateTime?
 
   /// Cloudinary. Both are written together by the upload flow. `imagePublicId`
   /// is the handle Cloudinary needs to delete or transform the asset; without

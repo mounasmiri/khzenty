@@ -11,7 +11,9 @@
 - **Cost per wear** — divide purchase price by wear count. Cheap to build once
   wear tracking exists, and unusually motivating.
 - **Capsule wardrobe mode** — pick N items, see how many outfits they yield.
-- **Laundry state** — mark items unavailable so suggestions skip them.
+- ~~**Laundry state**~~ — built. `ClothingItem.laundryStatus` is `CLEAN` or
+  `IN_LAUNDRY`, set manually. Outfit suggestions skipping unavailable garments
+  is still open, and belongs with whatever builds suggestions.
 - **Seasonal archive** — hide off-season clothes without deleting them.
 
 ## Technical

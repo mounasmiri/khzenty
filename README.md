@@ -163,6 +163,12 @@ That request goes through the Vite dev proxy to the API, so a JSON response conf
 | `POST` | `/api/uploads/signature` | cookie | Short-lived signature for a direct browser upload |
 | `PUT` | `/api/items/:id/image` | cookie | Attach an already-uploaded image to an item |
 | `DELETE` | `/api/items/:id/image` | cookie | Detach the photo and delete the asset |
+| `PATCH` | `/api/items/:id/laundry` | cookie | Set one garment's laundry status |
+| `POST` | `/api/items/laundry/washed` | cookie | Mark a list of garments as washed |
+
+**Laundry status is manual** — `CLEAN` or `IN_LAUNDRY`, never inferred, since the app has no way to know a garment is in the wash. `laundryAt` records when the status last changed and only moves when it actually changes, so re-sending the same status doesn't restart the clock on how long something has been in the basket.
+
+The bulk endpoint skips ids that aren't yours rather than rejecting the batch, and returns how many garments actually moved. Filtering on `IN_LAUNDRY` makes it idempotent: a second call matches nothing.
 
 **Image upload is signed and direct.** The browser asks for a signature, uploads straight to Cloudinary, then posts back only the `publicId`. Image bytes never pass through this server, so there is no multipart handling and no upload bandwidth cost.
 
