@@ -1,17 +1,67 @@
 import { useState } from 'react';
-import { Link } from 'react-router';
+import { Link, useSearchParams } from 'react-router';
 
 import { Button } from '@/components/ui/button';
 import { clothingApi } from '@/features/clothing/api';
 import { ItemCard } from '@/features/clothing/item-card';
 import { labelFor } from '@/features/clothing/labels';
-import type { LaundryStatus } from '@/features/clothing/types';
+import type { ClothingItem, LaundryStatus } from '@/features/clothing/types';
 import { useWardrobe } from '@/features/clothing/use-wardrobe';
 import { ApiError } from '@/lib/api';
 
+/** Kept in the URL, so the filter survives back-navigation and is linkable. */
+const FILTER_PARAM = 'laundry';
+
+const FILTERS = [
+  { value: 'all', label: 'All' },
+  { value: 'clean', label: 'Clean' },
+  { value: 'in-laundry', label: 'In laundry' },
+] as const;
+
+type FilterValue = (typeof FILTERS)[number]['value'];
+
+function parseFilter(raw: string | null): FilterValue {
+  // An unrecognised value falls back to showing everything rather than an
+  // empty grid, which would look like a broken wardrobe.
+  return FILTERS.some((f) => f.value === raw) ? (raw as FilterValue) : 'all';
+}
+
+function matches(item: ClothingItem, filter: FilterValue): boolean {
+  if (filter === 'clean') return item.laundryStatus === 'CLEAN';
+  if (filter === 'in-laundry') return item.laundryStatus === 'IN_LAUNDRY';
+
+  return true;
+}
+
 export function WardrobePage() {
   const { items, error, replaceItem } = useWardrobe();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [laundryError, setLaundryError] = useState<string | null>(null);
+
+  const filter = parseFilter(searchParams.get(FILTER_PARAM));
+
+  // Filtered client-side: the wardrobe is already fetched whole, so this needs
+  // no extra round trip. A server-side query belongs with the Phase 5 filters.
+  const visible = (items ?? []).filter((item) => matches(item, filter));
+
+  const counts = {
+    all: items?.length ?? 0,
+    clean: (items ?? []).filter((i) => i.laundryStatus === 'CLEAN').length,
+    'in-laundry': (items ?? []).filter((i) => i.laundryStatus === 'IN_LAUNDRY').length,
+  } satisfies Record<FilterValue, number>;
+
+  function selectFilter(value: FilterValue) {
+    const next = new URLSearchParams(searchParams);
+
+    if (value === 'all') {
+      // Keep the default out of the URL rather than carrying ?laundry=all.
+      next.delete(FILTER_PARAM);
+    } else {
+      next.set(FILTER_PARAM, value);
+    }
+
+    setSearchParams(next, { replace: true });
+  }
 
   async function changeLaundry(id: string, status: LaundryStatus) {
     setLaundryError(null);
@@ -32,7 +82,9 @@ export function WardrobePage() {
       <div className="flex items-center justify-between gap-4">
         <h1 className="text-2xl font-semibold tracking-tight">
           Your wardrobe
-          {items ? <span className="text-muted-foreground ml-2 text-base">{items.length}</span> : null}
+          {items ? (
+            <span className="text-muted-foreground ml-2 text-base">{items.length}</span>
+          ) : null}
         </h1>
 
         {/* Quick add leads, since photo-first capture is the fast path on a
@@ -49,6 +101,26 @@ export function WardrobePage() {
           </Button>
         </div>
       </div>
+
+      {items && items.length > 0 ? (
+        <div role="group" aria-label="Filter by laundry status" className="flex flex-wrap gap-1">
+          {FILTERS.map((option) => (
+            <Button
+              key={option.value}
+              type="button"
+              size="sm"
+              variant={option.value === filter ? 'default' : 'outline'}
+              aria-pressed={option.value === filter}
+              onClick={() => selectFilter(option.value)}
+            >
+              {option.label}
+              {/* Counts come from the full list, so they stay stable as the
+                  visible set narrows. */}
+              <span className="ml-1.5 opacity-70">{counts[option.value]}</span>
+            </Button>
+          ))}
+        </div>
+      ) : null}
 
       {error ?? laundryError ? (
         <p role="alert" className="text-destructive text-sm">
@@ -69,17 +141,35 @@ export function WardrobePage() {
         </div>
       ) : null}
 
-      {items && items.length > 0 ? (
+      {/* Distinct from an empty wardrobe: there are garments, just none in this
+          filter, so the way out is to change the filter rather than add items. */}
+      {items && items.length > 0 && visible.length === 0 ? (
+        <div className="rounded-lg border border-dashed p-8 text-center">
+          <p className="font-medium">
+            {filter === 'clean' ? 'Everything is in the wash' : 'Nothing is in the wash'}
+          </p>
+          <p className="text-muted-foreground mt-1 text-sm">
+            {filter === 'clean'
+              ? 'Mark something as washed and it will reappear here.'
+              : 'Mark a garment as in laundry and it will show up here.'}
+          </p>
+          <Button variant="outline" className="mt-4" onClick={() => selectFilter('all')}>
+            Show all {counts.all}
+          </Button>
+        </div>
+      ) : null}
+
+      {visible.length > 0 ? (
         <>
           {/* Favourites sort first server-side, so no client ordering here. */}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-            {items.map((item) => (
+            {visible.map((item) => (
               <ItemCard key={item.id} item={item} onLaundryChange={changeLaundry} />
             ))}
           </div>
 
           <p className="text-muted-foreground text-xs">
-            {[...new Set(items.map((i) => i.category))]
+            {[...new Set(visible.map((i) => i.category))]
               .map((category) => labelFor(category))
               .join(' · ')}
           </p>
