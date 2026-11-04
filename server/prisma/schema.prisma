@@ -161,7 +161,12 @@ model ClothingItem {
   /// Human-readable colour name — "White", "Navy", "Olive" — not a hex value.
   /// Free text, so consistent filtering later depends on a curated picker in
   /// the UI or normalisation in the service layer.
-  color   String
+  ///
+  /// Nullable, for the same reason `name` is: a photo-first capture should not
+  /// be blocked on typing a colour. Null means "not set yet" and the UI shows
+  /// an Unsorted badge, which is honest where a sentinel string was not — it
+  /// put a non-colour into the colour column.
+  color   String?
   seasons Season[]
 
   /// Pins a garment to the top of the wardrobe.

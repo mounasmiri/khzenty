@@ -83,6 +83,73 @@ describe('category derivation', () => {
     await agent.post('/api/items').send({ type: 'BANANA', color: 'Yellow' }).expect(400);
   });
 
+  describe('colour is optional', () => {
+    it('creates an item with no colour at all', async () => {
+      // The photo-first path: a draft has a type and nothing else.
+      const res = await agent.post('/api/items').send({ type: 'OTHER' }).expect(201);
+
+      expect(res.body.item.color).toBeNull();
+      expect(res.body.item.category).toBe('OTHER');
+    });
+
+    it('accepts an explicit null colour', async () => {
+      const res = await agent
+        .post('/api/items')
+        .send({ type: 'SNEAKERS', color: null })
+        .expect(201);
+
+      expect(res.body.item.color).toBeNull();
+    });
+
+    it('sets a colour on an item that had none', async () => {
+      const created = await agent.post('/api/items').send({ type: 'BOOTS' }).expect(201);
+      expect(created.body.item.color).toBeNull();
+
+      const updated = await agent
+        .patch(`/api/items/${created.body.item.id as string}`)
+        .send({ color: 'Oxblood' })
+        .expect(200);
+
+      expect(updated.body.item.color).toBe('Oxblood');
+    });
+
+    it('clears a colour back to null', async () => {
+      const created = await agent
+        .post('/api/items')
+        .send({ type: 'JEANS', color: 'Indigo' })
+        .expect(201);
+
+      const updated = await agent
+        .patch(`/api/items/${created.body.item.id as string}`)
+        .send({ color: null })
+        .expect(200);
+
+      expect(updated.body.item.color).toBeNull();
+    });
+
+    it('still rejects an empty-string colour', async () => {
+      // A blank field must not masquerade as a colour; the client sends null.
+      await agent.post('/api/items').send({ type: 'HAT', color: '   ' }).expect(400);
+      await agent.post('/api/items').send({ type: 'HAT', color: '' }).expect(400);
+    });
+
+    it('leaves the colour alone when the field is absent from a PATCH', async () => {
+      const created = await agent
+        .post('/api/items')
+        .send({ type: 'SCARF', color: 'Grey' })
+        .expect(201);
+
+      const updated = await agent
+        .patch(`/api/items/${created.body.item.id as string}`)
+        .send({ favorite: true })
+        .expect(200);
+
+      // Absent means unchanged, which is what distinguishes it from null.
+      expect(updated.body.item.color).toBe('Grey');
+      expect(updated.body.item.favorite).toBe(true);
+    });
+  });
+
   it('exposes every category through the taxonomy endpoint', async () => {
     const res = await agent.get('/api/taxonomy').expect(200);
 
