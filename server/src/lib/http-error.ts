@@ -11,10 +11,19 @@ export class HttpError extends Error {
   /** Whether `message` is safe to return to the client. */
   readonly expose: boolean;
 
-  constructor(status: number, message: string, options?: { cause?: unknown }) {
+  /**
+   * `expose` defaults to `status < 500`, so unexpected server errors never leak
+   * their message. Some 5xx responses are deliberate and safe to describe —
+   * "image upload is not configured", for instance — so it can be overridden.
+   */
+  constructor(
+    status: number,
+    message: string,
+    options?: { cause?: unknown; expose?: boolean },
+  ) {
     super(message, options);
     this.name = 'HttpError';
     this.status = status;
-    this.expose = status < 500;
+    this.expose = options?.expose ?? status < 500;
   }
 }

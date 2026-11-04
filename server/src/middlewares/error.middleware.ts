@@ -16,7 +16,10 @@ export const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
   // Never leak an unexpected error's message to the client.
   const message = isHttpError && err.expose ? err.message : 'Internal Server Error';
 
-  if (status >= 500) {
+  // Log anything whose message we would not show the client — i.e. genuinely
+  // unexpected failures. A deliberate, exposed 5xx (such as "upload is not
+  // configured") is a known state, not an incident, so it stays out of the log.
+  if (!isHttpError || !err.expose) {
     console.error('[khzenty] Unhandled error:', err);
   }
 

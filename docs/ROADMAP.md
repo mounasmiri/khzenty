@@ -106,16 +106,28 @@ it exists.
 Split out of Phase 3: it needs Cloudinary credentials and is a self-contained
 pipeline, so bundling it would have blocked the wardrobe on an external account.
 
-- [ ] Cloudinary upload pipeline
-- [ ] Image handling: resize, format, delete-on-remove
+- [x] Cloudinary upload pipeline — signed direct-to-Cloudinary
+- [x] Format enforcement — `allowed_formats` is part of the signed payload
+- [x] Size enforcement — checked after upload against the asset's real byte
+      count, since the upload API has no signable max-size parameter
+- [x] Delete on **replace** — superseded assets are destroyed
+- [ ] Delete on **item removal** — deleting a garment still leaves its
+      Cloudinary asset behind. `imagePublicId` is stored precisely to make this
+      possible; `deleteItem` does not yet use it.
+- [ ] Resize / transformation on delivery
 
-The columns already exist and are nullable: `ClothingItem.imageUrl` and
-`imagePublicId`. `imagePublicId` is the handle Cloudinary needs to delete an
-asset — without writing it, removing a garment leaks its image.
+**Settled:** signed direct upload, not a server-side proxy. Image bytes never
+reach the API, so there is no multipart handling and no upload bandwidth cost.
+The trade-off is that the client is involved in the flow, which is why the
+confirm step re-reads format and size from Cloudinary rather than trusting
+anything the client reports.
 
-**Open question:** signed direct-to-Cloudinary upload (no image bytes touch our
-server, but more moving parts) versus a server-side proxy upload (simpler, all
-validation server-side, but every image flows through the API).
+**Credentials are optional.** Requiring them would stop the server booting for
+any clone without a Cloudinary account, including CI, so the endpoints return
+503 while unconfigured and the rest of the wardrobe keeps working.
+
+**Frontend not wired yet.** The two endpoints exist and are tested, but no UI
+calls them — the wardrobe grid still renders type-label placeholders.
 
 ---
 
