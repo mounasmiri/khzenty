@@ -14,16 +14,21 @@ export function ItemCard({ item }: { item: ClothingItem }) {
       to={`/items/${item.id}`}
       className="group focus-visible:ring-ring flex flex-col gap-2 rounded-lg border p-3 transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:outline-none"
     >
-      <div className="bg-muted flex aspect-square items-center justify-center overflow-hidden rounded-md">
+      {/* `object-contain`, not `object-cover`: garment photos arrive at every
+          aspect ratio, and cropping to fill the tile cut the toes off shoes and
+          the hems off trousers. Letterboxing on a light neutral ground shows
+          the whole garment, and the fixed 4:5 tile — matching the detail view —
+          keeps rows aligned despite the varying image shapes. */}
+      <div className="flex aspect-[4/5] items-center justify-center overflow-hidden rounded-md bg-neutral-50 dark:bg-neutral-900">
         {item.imageUrl ? (
           <img
             src={item.imageUrl}
             alt={item.name ?? labelFor(item.type)}
-            className="h-full w-full object-cover"
+            className="max-h-full max-w-full object-contain"
+            loading="lazy"
           />
         ) : (
-          // Images arrive in a later phase; until then every tile is a
-          // placeholder, so the grid must read well without them.
+          // The grid has to read well without photos: many garments have none.
           <span className="text-muted-foreground px-2 text-center text-xs">
             {labelFor(item.type)}
           </span>
