@@ -17,5 +17,12 @@ export const clothingApi = {
 
   remove: (id: string) => api.delete<void>(`/items/${encodeURIComponent(id)}`),
 
+  removeImage: (id: string) =>
+    api
+      .delete<{ item: { id: string; imageUrl: string | null } }>(
+        `/items/${encodeURIComponent(id)}/image`,
+      )
+      .then((r) => r.item),
+
   taxonomy: () => api.get<{ taxonomy: TaxonomyGroup[] }>('/taxonomy').then((r) => r.taxonomy),
 };
