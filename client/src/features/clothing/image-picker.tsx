@@ -78,9 +78,11 @@ export function ImagePicker({
       <Label htmlFor="photo">Photo (optional)</Label>
 
       <div className="flex items-start gap-3">
-        <div className="bg-muted flex size-24 shrink-0 items-center justify-center overflow-hidden rounded-md border">
+        {/* Contain here too, on the same neutral ground as the grid and detail
+            tiles: the preview should show what will be stored, not a crop. */}
+        <div className="flex size-24 shrink-0 items-center justify-center overflow-hidden rounded-md border bg-neutral-50 dark:bg-neutral-900">
           {shown ? (
-            <img src={shown} alt="" className="size-full object-cover" />
+            <img src={shown} alt="" className="max-h-full max-w-full object-contain" />
           ) : (
             <span className="text-muted-foreground px-1 text-center text-[10px] leading-tight">
               {placeholder}
