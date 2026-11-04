@@ -7,7 +7,10 @@ import { useAuth } from '@/features/auth/use-auth';
 import { ItemDetailPage } from '@/pages/item-detail-page';
 import { ItemEditPage } from '@/pages/item-edit-page';
 import { ItemNewPage } from '@/pages/item-new-page';
+import { BulkAddPage } from '@/pages/bulk-add-page';
 import { LoginPage } from '@/pages/login-page';
+import { QuickAddPage } from '@/pages/quick-add-page';
+import { QuickSortPage } from '@/pages/quick-sort-page';
 import { RegisterPage } from '@/pages/register-page';
 import { WardrobePage } from '@/pages/wardrobe-page';
 
@@ -50,6 +53,10 @@ function App() {
         <Route element={<AppShell />}>
           <Route path="/" element={<WardrobePage />} />
           <Route path="/items/new" element={<ItemNewPage />} />
+          {/* Declared before /items/:id so the literal segments win. */}
+          <Route path="/items/quick-add" element={<QuickAddPage />} />
+          <Route path="/items/bulk-add" element={<BulkAddPage />} />
+          <Route path="/items/sort" element={<QuickSortPage />} />
           <Route path="/items/:id" element={<ItemDetailPage />} />
           <Route path="/items/:id/edit" element={<ItemEditPage />} />
         </Route>

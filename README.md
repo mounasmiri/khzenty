@@ -162,6 +162,7 @@ That request goes through the Vite dev proxy to the API, so a JSON response conf
 | `GET` | `/api/taxonomy` | cookie | Garment types grouped by category |
 | `POST` | `/api/uploads/signature` | cookie | Short-lived signature for a direct browser upload |
 | `PUT` | `/api/items/:id/image` | cookie | Attach an already-uploaded image to an item |
+| `DELETE` | `/api/items/:id/image` | cookie | Detach the photo and delete the asset |
 
 **Image upload is signed and direct.** The browser asks for a signature, uploads straight to Cloudinary, then posts back only the `publicId`. Image bytes never pass through this server, so there is no multipart handling and no upload bandwidth cost.
 
@@ -192,7 +193,7 @@ Run from the repo root:
 | `npm run dev:client` | Start web only |
 | `npm run build` | Build both packages |
 | `npm run typecheck` | Typecheck both packages |
-| `npm test` | Run the server test suite (Vitest + Supertest) |
+| `npm test` | Run both test suites (Vitest; Supertest on the server) |
 | `npm run lint` | Lint both packages (oxlint) |
 | `npm run setup` | Install dependencies in all three packages |
 | `npm run db:generate` | Regenerate the Prisma client |

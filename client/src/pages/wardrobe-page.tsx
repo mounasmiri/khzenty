@@ -16,9 +16,19 @@ export function WardrobePage() {
           {items ? <span className="text-muted-foreground ml-2 text-base">{items.length}</span> : null}
         </h1>
 
-        <Button asChild>
-          <Link to="/items/new">Add item</Link>
-        </Button>
+        {/* Quick add leads, since photo-first capture is the fast path on a
+            phone; the full form stays available for a considered entry. */}
+        <div className="flex flex-wrap gap-2">
+          <Button asChild>
+            <Link to="/items/quick-add">Quick add</Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link to="/items/bulk-add">Bulk add</Link>
+          </Button>
+          <Button asChild variant="ghost">
+            <Link to="/items/new">Full form</Link>
+          </Button>
+        </div>
       </div>
 
       {error ? (

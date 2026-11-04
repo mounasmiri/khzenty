@@ -129,6 +129,17 @@ any clone without a Cloudinary account, including CI, so the endpoints return
 - [x] Upload UI — pick a photo in the add/edit form, with a local preview,
       staged progress, and error messages. The grid and detail view show the
       image, falling back to the type label.
+- [x] Remove photo — `DELETE /api/items/:id/image`, offered in the edit form
+      and on the detail page behind a confirmation
+- [x] Mobile-first capture — quick add (camera on mobile), bulk add (3
+      concurrent uploads, per-file progress and retry), and a quick-sort screen
+      for assigning types afterwards. Photos are resized to 1200px in the
+      browser first.
+
+**Drafts carry a sentinel colour.** `color` is required by the API, so a
+photo-only garment cannot omit it; drafts are created as type `OTHER` with
+colour `Unsorted`. Making the column nullable is the cleaner fix and is still
+open — see the colour/name asymmetry noted below.
 
 **Blocked on a Cloudinary key permission.** The signature is correct — proved by
 Cloudinary echoing its own string-to-sign on a deliberately tampered attempt,
