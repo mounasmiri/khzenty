@@ -132,3 +132,40 @@ export async function confirmItemImage(userId: string, itemId: string, publicId:
   return updated;
 }
 
+/**
+ * Detaches an item's image and deletes the asset behind it.
+ *
+ * Deliberately does NOT require Cloudinary to be configured: clearing a stale
+ * reference must stay possible even when the integration is switched off, and
+ * `destroyAssetQuietly` already no-ops in that case.
+ *
+ * Removing from an item that has no image is a successful no-op rather than an
+ * error — the end state the caller asked for is already true.
+ */
+export async function removeItemImage(userId: string, itemId: string) {
+  const item = await prisma.clothingItem.findFirst({
+    where: { id: itemId, userId },
+    select: { id: true, imagePublicId: true },
+  });
+
+  if (!item) {
+    throw new HttpError(404, 'Clothing item not found');
+  }
+
+  // Clear the columns first: the database is the source of truth, so the image
+  // must be gone from the user's wardrobe even if Cloudinary cannot be reached.
+  const updated = await prisma.clothingItem.update({
+    where: { id: item.id },
+    data: { imageUrl: null, imagePublicId: null },
+    select: { id: true, imageUrl: true },
+  });
+
+  // Best effort, after the update. A failure here orphans an asset rather than
+  // leaving the user unable to remove the photo.
+  if (item.imagePublicId) {
+    await destroyAssetQuietly(item.imagePublicId);
+  }
+
+  return updated;
+}
+

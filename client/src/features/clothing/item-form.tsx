@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { ApiError } from '@/lib/api';
+import { clothingApi } from './api';
 import { ImagePicker } from './image-picker';
 import { labelFor } from './labels';
 import type { ClothingItem, ClothingItemInput } from './types';
@@ -51,6 +52,8 @@ export function ItemForm({ item, submitLabel, onSubmit, onDone, onCancel }: Item
   const [seasons, setSeasons] = useState<string[]>(item?.seasons ?? []);
   const [favorite, setFavorite] = useState(item?.favorite ?? false);
   const [file, setFile] = useState<File | null>(null);
+  /** Tracked locally so the placeholder returns the moment a photo is removed. */
+  const [existingImageUrl, setExistingImageUrl] = useState(item?.imageUrl ?? null);
 
   const [phase, setPhase] = useState<Phase>('editing');
   const [error, setError] = useState<string | null>(null);
@@ -203,11 +206,30 @@ export function ItemForm({ item, submitLabel, onSubmit, onDone, onCancel }: Item
       </div>
 
       <ImagePicker
-        existingUrl={item?.imageUrl ?? null}
+        existingUrl={existingImageUrl}
         file={file}
         onSelect={setFile}
         disabled={busy}
         placeholder={type ? labelFor(type) : 'No photo'}
+        // Only offered while editing: there is nothing stored to remove during
+        // creation.
+        onRemoveExisting={
+          item
+            ? async () => {
+                setError(null);
+
+                try {
+                  await clothingApi.removeImage(item.id);
+                  setExistingImageUrl(null);
+                } catch (caught) {
+                  setError(
+                    caught instanceof ApiError ? caught.message : 'Could not remove the photo.',
+                  );
+                  throw caught;
+                }
+              }
+            : undefined
+        }
       />
 
       <fieldset className="flex flex-col gap-2" disabled={busy}>

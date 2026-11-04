@@ -14,6 +14,11 @@ export function ItemDetailPage() {
   const { item, error, loading } = useClothingItem(id);
   const [confirming, setConfirming] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  /** Local so the placeholder returns immediately after a removal. */
+  const [imageUrl, setImageUrl] = useState<string | null | undefined>(undefined);
+  const [confirmingPhotoRemoval, setConfirmingPhotoRemoval] = useState(false);
+  const [removingPhoto, setRemovingPhoto] = useState(false);
+  const [photoError, setPhotoError] = useState<string | null>(null);
 
   if (loading) {
     return <p className="text-muted-foreground text-sm">Loading…</p>;
@@ -33,6 +38,23 @@ export function ItemDetailPage() {
   }
 
   const outfitCount = item._count.outfitItems;
+  // `undefined` means "not touched here", so the fetched value is used.
+  const shownImageUrl = imageUrl === undefined ? item.imageUrl : imageUrl;
+
+  async function handleRemovePhoto() {
+    setPhotoError(null);
+    setRemovingPhoto(true);
+
+    try {
+      await clothingApi.removeImage(item!.id);
+      setImageUrl(null);
+      setConfirmingPhotoRemoval(false);
+    } catch (caught) {
+      setPhotoError(caught instanceof ApiError ? caught.message : 'Could not remove the photo.');
+    } finally {
+      setRemovingPhoto(false);
+    }
+  }
 
   async function handleDelete() {
     setDeleteError(null);
@@ -65,21 +87,64 @@ export function ItemDetailPage() {
         </div>
       </div>
 
-      <div className="bg-muted flex aspect-video max-w-md items-center justify-center overflow-hidden rounded-lg border">
-        {item.imageUrl ? (
-          <img
-            src={item.imageUrl}
-            alt={item.name ?? labelFor(item.type)}
-            className="size-full object-contain"
-          />
-        ) : (
-          // Same fallback as the grid: the type label, so an item without a
-          // photo is still identifiable.
-          <div className="text-muted-foreground p-6 text-center">
-            <p className="text-sm font-medium">{labelFor(item.type)}</p>
-            <p className="mt-1 text-xs">No photo yet</p>
-          </div>
-        )}
+      <div className="flex flex-col items-start gap-3">
+        {/* object-contain on a light neutral ground: garments are shot at all
+            sorts of aspect ratios, and cropping cuts off shoes and hems. The
+            4:5 tile matches the grid so the two read as one system. */}
+        <div className="flex aspect-[4/5] w-full max-w-xs items-center justify-center overflow-hidden rounded-lg border bg-neutral-50 dark:bg-neutral-900">
+          {shownImageUrl ? (
+            <img
+              src={shownImageUrl}
+              alt={item.name ?? labelFor(item.type)}
+              className="max-h-full max-w-full object-contain"
+            />
+          ) : (
+            // Same fallback as the grid: the type label, so an item without a
+            // photo is still identifiable.
+            <div className="text-muted-foreground p-6 text-center">
+              <p className="text-sm font-medium">{labelFor(item.type)}</p>
+              <p className="mt-1 text-xs">No photo yet</p>
+            </div>
+          )}
+        </div>
+
+        {shownImageUrl ? (
+          confirmingPhotoRemoval ? (
+            <div className="flex flex-col gap-2 rounded-lg border p-3">
+              <p className="text-sm font-medium">Remove this photo?</p>
+              <p className="text-muted-foreground text-sm">
+                The garment stays in your wardrobe; only the photo is deleted.
+              </p>
+              {photoError ? (
+                <p role="alert" className="text-destructive text-sm">
+                  {photoError}
+                </p>
+              ) : null}
+              <div className="flex gap-2">
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  disabled={removingPhoto}
+                  onClick={() => void handleRemovePhoto()}
+                >
+                  {removingPhoto ? 'Removing…' : 'Yes, remove'}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  disabled={removingPhoto}
+                  onClick={() => setConfirmingPhotoRemoval(false)}
+                >
+                  Keep it
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <Button variant="outline" size="sm" onClick={() => setConfirmingPhotoRemoval(true)}>
+              Remove photo
+            </Button>
+          )
+        ) : null}
       </div>
 
       <dl className="grid grid-cols-2 gap-4 rounded-lg border p-4 text-sm sm:grid-cols-3">

@@ -13,6 +13,11 @@ interface ImagePickerProps {
   /** Shown when there is neither a pick nor a stored image. */
   placeholder: string;
   disabled?: boolean;
+  /**
+   * Deletes the stored photo. Only offered when one exists, and only on edit —
+   * there is nothing stored to remove while creating.
+   */
+  onRemoveExisting?: () => Promise<void>;
 }
 
 /**
@@ -25,9 +30,12 @@ export function ImagePicker({
   onSelect,
   placeholder,
   disabled = false,
+  onRemoveExisting,
 }: ImagePickerProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [confirmingRemoval, setConfirmingRemoval] = useState(false);
+  const [removing, setRemoving] = useState(false);
 
   /**
    * Object URLs hold the file in memory until revoked, so each one is cleaned
@@ -93,8 +101,55 @@ export function ImagePicker({
 
           {file ? (
             <Button type="button" variant="ghost" size="sm" disabled={disabled} onClick={clear}>
-              Remove
+              Discard pick
             </Button>
+          ) : null}
+
+          {/* Only when a photo is actually stored: nothing to delete otherwise. */}
+          {!file && existingUrl && onRemoveExisting ? (
+            confirmingRemoval ? (
+              <div className="flex flex-col gap-1">
+                <p className="text-sm font-medium">Remove this photo?</p>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    disabled={removing || disabled}
+                    onClick={() => {
+                      setRemoving(true);
+                      void onRemoveExisting()
+                        .catch(() => undefined)
+                        .finally(() => {
+                          setRemoving(false);
+                          setConfirmingRemoval(false);
+                        });
+                    }}
+                  >
+                    {removing ? 'Removing…' : 'Yes, remove'}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    disabled={removing}
+                    onClick={() => setConfirmingRemoval(false)}
+                  >
+                    Keep it
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={disabled}
+                onClick={() => setConfirmingRemoval(true)}
+              >
+                Remove photo
+              </Button>
+            )
           ) : null}
 
           <p className="text-muted-foreground text-xs">

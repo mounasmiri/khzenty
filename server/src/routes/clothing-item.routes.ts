@@ -7,7 +7,7 @@ import {
   patchItem,
   postItem,
 } from '../controllers/clothing-item.controller.js';
-import { putItemImage } from '../controllers/upload.controller.js';
+import { deleteItemImage, putItemImage } from '../controllers/upload.controller.js';
 import { requireAuth } from '../middlewares/auth.middleware.js';
 import { validateBody } from '../middlewares/validate.middleware.js';
 import {
@@ -29,3 +29,4 @@ clothingItemRouter.delete('/:id', deleteItemById);
 
 // Attaches an image the client has already uploaded straight to Cloudinary.
 clothingItemRouter.put('/:id/image', validateBody(confirmItemImageSchema), putItemImage);
+clothingItemRouter.delete('/:id/image', deleteItemImage);
