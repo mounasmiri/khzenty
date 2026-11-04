@@ -111,9 +111,9 @@ pipeline, so bundling it would have blocked the wardrobe on an external account.
 - [x] Size enforcement — checked after upload against the asset's real byte
       count, since the upload API has no signable max-size parameter
 - [x] Delete on **replace** — superseded assets are destroyed
-- [ ] Delete on **item removal** — deleting a garment still leaves its
-      Cloudinary asset behind. `imagePublicId` is stored precisely to make this
-      possible; `deleteItem` does not yet use it.
+- [x] Delete on **item removal** — the asset is destroyed after the row is
+      gone, best-effort: a Cloudinary outage orphans an image rather than
+      blocking the delete
 - [ ] Resize / transformation on delivery
 
 **Settled:** signed direct upload, not a server-side proxy. Image bytes never

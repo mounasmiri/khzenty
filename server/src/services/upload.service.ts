@@ -6,6 +6,7 @@ import {
   userFolder,
 } from '../config/cloudinary.js';
 import { env } from '../config/env.js';
+import { destroyAssetQuietly } from '../lib/cloudinary-asset.js';
 import { HttpError } from '../lib/http-error.js';
 
 export interface UploadSignature {
@@ -108,12 +109,12 @@ export async function confirmItemImage(userId: string, itemId: string, publicId:
   // Re-checked here rather than trusted from the signature: this is the only
   // point where the asset's real format and size are known.
   if (!ALLOWED_FORMATS.includes(format)) {
-    await destroyQuietly(publicId);
+    await destroyAssetQuietly(publicId);
     throw new HttpError(400, `Unsupported image format: ${format || 'unknown'}`);
   }
 
   if (resource.bytes > env.CLOUDINARY_MAX_BYTES) {
-    await destroyQuietly(publicId);
+    await destroyAssetQuietly(publicId);
     throw new HttpError(400, `Image exceeds the ${env.CLOUDINARY_MAX_BYTES} byte limit`);
   }
 
@@ -125,20 +126,9 @@ export async function confirmItemImage(userId: string, itemId: string, publicId:
 
   // Replacing an image leaves the previous asset orphaned, so remove it.
   if (item.imagePublicId && item.imagePublicId !== resource.public_id) {
-    await destroyQuietly(item.imagePublicId);
+    await destroyAssetQuietly(item.imagePublicId);
   }
 
   return updated;
 }
 
-/**
- * Deleting a stray asset is cleanup, not part of the request's contract — a
- * failure here must not turn a successful upload into an error.
- */
-async function destroyQuietly(publicId: string): Promise<void> {
-  try {
-    await cloudinary.uploader.destroy(publicId, { resource_type: 'image' });
-  } catch (error) {
-    console.error(`[khzenty] Could not delete Cloudinary asset ${publicId}:`, error);
-  }
-}

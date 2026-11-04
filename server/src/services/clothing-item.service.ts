@@ -1,5 +1,6 @@
 import { prisma } from '../config/prisma.js';
 import { categoryForType } from '../lib/clothing-taxonomy.js';
+import { destroyAssetQuietly } from '../lib/cloudinary-asset.js';
 import { HttpError } from '../lib/http-error.js';
 import type {
   CreateClothingItemInput,
@@ -95,9 +96,24 @@ export async function updateItem(userId: string, id: string, input: UpdateClothi
 }
 
 export async function deleteItem(userId: string, id: string): Promise<void> {
+  // Read the asset handle before the row goes, since it is the only record of
+  // which Cloudinary image belonged to this garment. Still scoped by userId, so
+  // this reveals nothing about another user's items.
+  const item = await prisma.clothingItem.findFirst({
+    where: { id, userId },
+    select: { imagePublicId: true },
+  });
+
   const { count } = await prisma.clothingItem.deleteMany({ where: { id, userId } });
 
   if (count === 0) {
     throw new HttpError(404, 'Clothing item not found');
+  }
+
+  // After the delete, never before: the database is the source of truth, and a
+  // Cloudinary outage must not stop a user removing a garment. Orphaning an
+  // image is a far smaller problem than an undeletable item.
+  if (item?.imagePublicId) {
+    await destroyAssetQuietly(item.imagePublicId);
   }
 }
