@@ -13,10 +13,11 @@ export function ItemNewPage() {
       <ItemForm
         submitLabel="Add to wardrobe"
         onCancel={() => void navigate('/')}
-        onSubmit={async (input) => {
-          const created = await clothingApi.create(input);
-          void navigate(`/items/${created.id}`, { replace: true });
-        }}
+        // Resolving with the created item is what lets the form attach a photo:
+        // the confirm endpoint addresses the item by id, which does not exist
+        // until this call returns.
+        onSubmit={(input) => clothingApi.create(input)}
+        onDone={(item) => void navigate(`/items/${item.id}`, { replace: true })}
       />
     </section>
   );

@@ -65,6 +65,23 @@ export function ItemDetailPage() {
         </div>
       </div>
 
+      <div className="bg-muted flex aspect-video max-w-md items-center justify-center overflow-hidden rounded-lg border">
+        {item.imageUrl ? (
+          <img
+            src={item.imageUrl}
+            alt={item.name ?? labelFor(item.type)}
+            className="size-full object-contain"
+          />
+        ) : (
+          // Same fallback as the grid: the type label, so an item without a
+          // photo is still identifiable.
+          <div className="text-muted-foreground p-6 text-center">
+            <p className="text-sm font-medium">{labelFor(item.type)}</p>
+            <p className="mt-1 text-xs">No photo yet</p>
+          </div>
+        )}
+      </div>
+
       <dl className="grid grid-cols-2 gap-4 rounded-lg border p-4 text-sm sm:grid-cols-3">
         <div>
           <dt className="text-muted-foreground text-xs">Category</dt>

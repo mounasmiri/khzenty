@@ -169,6 +169,8 @@ The signature covers `folder` and `allowed_formats`, so changing either client-s
 
 Credentials are optional — without them the server still boots and these two endpoints return `503`.
 
+The API key must have the **create (upload)** action enabled. A read-only key passes `cloudinary.api.ping()` but uploads fail with `403 missing permissions (actions=["create"])`, which looks like a signature problem and is not one.
+
 **Writes take `type`, not `category`.** The server derives the category from the type, so `category: FOOTWEAR` with `type: JEANS` cannot be expressed — a `category` in the request body is ignored rather than trusted. `GET /api/taxonomy` exists so the client's type picker can only offer values the API accepts, instead of duplicating the taxonomy and drifting from it.
 
 Item routes are scoped by `userId`. Updates and deletes filter on `{ id, userId }` and report a count of zero as `404`, so probing another user's item id reveals nothing about whether it exists.
