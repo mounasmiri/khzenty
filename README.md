@@ -292,4 +292,20 @@ Coming soon.
 
 ## 📄 License
 
-MIT
+**AGPL-3.0-or-later** — see [LICENSE](LICENSE).
+
+This was MIT until background removal was added. `@imgly/background-removal` is
+AGPL-3.0, and because it runs in the browser, shipping this app ships that
+library to every visitor — so the combined work is distributed under copyleft
+terms. Relicensing the project keeps that internally consistent rather than
+leaving an MIT declaration that the dependency contradicts.
+
+If you want this under a permissive licence instead, you would need to drop
+background removal or replace it with a permissively licensed alternative.
+IMG.LY also offer other licensing terms on request.
+
+### Third-party notices
+
+| Dependency | Licence | Note |
+| --- | --- | --- |
+| `@imgly/background-removal` | AGPL-3.0 | The reason this project is AGPL. Model and WASM assets are fetched at runtime from IMG.LY's CDN. |
