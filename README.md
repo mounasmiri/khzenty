@@ -240,7 +240,13 @@ khzenty/
 │       ├── app.ts              # app assembly (no port binding)
 │       └── server.ts           # port binding, graceful shutdown
 │
-└── docs/                       # project context, roadmap, ideas
+└── docs/
+    ├── PROJECT_CONTEXT.md      # what this is, and the decisions on record
+    ├── TASKS.md                # done / in progress / next
+    ├── ROADMAP.md              # phases, with the reasoning
+    ├── ARCHITECTURE.md         # ERD and sequence diagrams
+    ├── DECISIONS.md            # decision log: chosen, rejected, why
+    └── IDEAS.md                # parking lot
 ```
 
 ---
@@ -280,7 +286,9 @@ The suite deliberately targets the invariants that manual testing misses: per-us
 - [ ] Packing Assistant
 - [ ] AI Features
 
-See [docs/ROADMAP.md](docs/ROADMAP.md) for detail.
+See [docs/ROADMAP.md](docs/ROADMAP.md) for detail, [docs/TASKS.md](docs/TASKS.md)
+for what is next, and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) /
+[docs/DECISIONS.md](docs/DECISIONS.md) for how it is put together and why.
 
 ---
 
