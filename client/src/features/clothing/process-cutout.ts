@@ -1,3 +1,5 @@
+import { erodeRgbaAlpha } from './alpha-mask';
+import type { ErosionOptions } from './alpha-mask';
 import {
   MAX_CUTOUT_SIZE,
   computeSquareLayout,
@@ -41,13 +43,16 @@ export interface CutoutResult {
  */
 export async function finishCutout(
   cutout: Blob,
-  options: { maxSize?: number; paddingRatio?: number } = {},
+  options: { maxSize?: number; paddingRatio?: number; erosion?: ErosionOptions } = {},
 ): Promise<CutoutResult> {
   const maxSize = options.maxSize ?? MAX_CUTOUT_SIZE;
   const bitmap = await createImageBitmap(cutout);
 
   try {
-    const bounds = measureBounds(bitmap);
+    // Erode first, then measure: trimming to the un-eroded mask would leave
+    // the fringe inside the bounds and simply frame it.
+    const prepared = prepareSource(bitmap, options.erosion);
+    const bounds = prepared.bounds;
 
     if (!bounds) {
       // Nothing opaque: the model found no subject. Signalled rather than
@@ -72,8 +77,12 @@ export async function finishCutout(
 
     // No fillRect: the canvas starts fully transparent and stays that way
     // outside the garment.
+    //
+    // Drawn from the eroded canvas, not the original bitmap — otherwise the
+    // erosion would only have narrowed the crop and the fringe would come
+    // straight back into the output.
     context.drawImage(
-      bitmap,
+      prepared.canvas,
       layout.sourceX,
       layout.sourceY,
       layout.sourceWidth,
@@ -100,8 +109,16 @@ export async function finishCutout(
   }
 }
 
-/** Reads the alpha channel at natural size to locate the garment. */
-function measureBounds(bitmap: ImageBitmap) {
+/**
+ * Erodes the mask at natural size and locates what is left.
+ *
+ * Returns the canvas as well as the bounds, because the eroded pixels are the
+ * ones that must be drawn — the original bitmap still carries the fringe.
+ */
+function prepareSource(
+  bitmap: ImageBitmap,
+  erosion?: ErosionOptions,
+): { canvas: HTMLCanvasElement; bounds: ReturnType<typeof findOpaqueBounds> } {
   const canvas = document.createElement('canvas');
   canvas.width = bitmap.width;
   canvas.height = bitmap.height;
@@ -113,9 +130,17 @@ function measureBounds(bitmap: ImageBitmap) {
   }
 
   context.drawImage(bitmap, 0, 0);
-  const { data } = context.getImageData(0, 0, bitmap.width, bitmap.height);
 
-  return findOpaqueBounds(data, bitmap.width, bitmap.height);
+  const imageData = context.getImageData(0, 0, bitmap.width, bitmap.height);
+
+  erodeRgbaAlpha(imageData.data, bitmap.width, bitmap.height, erosion ?? {});
+  context.putImageData(imageData, 0, 0);
+
+  // Measured on the eroded data, so the crop hugs what will actually be drawn.
+  return {
+    canvas,
+    bounds: findOpaqueBounds(imageData.data, bitmap.width, bitmap.height),
+  };
 }
 
 /**
