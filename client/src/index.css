@@ -86,8 +86,18 @@
     /* The one surface every garment photo sits on. Cutouts are stored with a
        transparent background and never have a colour baked in, so this token
        is the only thing that decides what shows through — change it here and
-       the grid, detail view, form and any future outfit board all follow. */
-    --garment-surface: oklch(0.985 0 0);
+       the grid, detail view, form and any future outfit board all follow.
+
+       Deliberately off-white rather than near-white: once backgrounds are
+       removed, a white shirt on a 0.985 surface is an invisible silhouette.
+       0.965 keeps the tile light while leaving the garment an edge. */
+    --garment-surface: oklch(0.965 0 0);
+
+    /* Faint, and follows the alpha channel rather than the image box, so a
+       cutout reads as an object sitting on the surface. This is what keeps a
+       white garment legible — the shadow does the separating, so the surface
+       does not have to be dark enough to fight the photo. */
+    --garment-shadow: oklch(0 0 0 / 14%);
 }
 
 .dark {
@@ -123,7 +133,12 @@
     --sidebar-border: oklch(1 0 0 / 10%);
     --sidebar-ring: oklch(0.556 0 0);
 
-    --garment-surface: oklch(0.205 0 0);
+    /* Lifted off the card background for the same reason, so a dark garment
+       keeps an edge. */
+    --garment-surface: oklch(0.235 0 0);
+
+    /* Stronger in dark mode: a 14% shadow is invisible against a dark tile. */
+    --garment-shadow: oklch(0 0 0 / 45%);
 }
 
 @layer base {
