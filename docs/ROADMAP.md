@@ -97,8 +97,6 @@ it exists.
 
 - No pagination. `listItems` returns the user's whole wardrobe, which is fine at
   current scale; revisit alongside Phase 5 filters.
-- The grid and detail view render without images, since none exist yet — tiles
-  fall back to a type label.
 
 ---
 
@@ -148,6 +146,20 @@ which matched ours exactly. A *correct* signature returns
 `403 missing permissions (actions=["create"])`, so the API key in use can read
 (`ping` succeeds) but cannot upload. Needs a key with the create/upload action
 enabled; no code change.
+
+- [x] Background removal — optional and in-browser via
+      `@imgly/background-removal` (`isnet_quint8`), with a before/after
+      preview, trim-to-garment, centring on a square and a WebP export with
+      alpha. Opt-in in bulk add, processed one photo at a time. Any failure
+      keeps the original photo
+- [x] One shared `--garment-surface` token behind a `GarmentImage` component,
+      so no background is ever baked into a file
+
+**Background removal is AGPL-3.0**, which is why the project relicensed. The
+library is imported dynamically: a static import pulled it and the ONNX Runtime
+into the main bundle, making every visitor pay for a feature most never use.
+`dist` grows to ~25 MB (the ONNX Runtime wasm), all of it fetched only on first
+use, and the ~40 MB model comes from IMG.LY's CDN on top of that.
 
 **Create saves before uploading.** The confirm endpoint addresses an item by id,
 which does not exist until the item is created, so the form saves first and then
@@ -207,8 +219,9 @@ These are real work with no natural home in the sequence above:
       mutation, not just by passing.
 - [x] CI pipeline — GitHub Actions: install, typecheck, test, build, with a
       Postgres service container
-- [ ] Extend coverage beyond the two invariants: auth endpoints, outfits, and
-      the client (no frontend tests exist yet)
+- [ ] Extend coverage beyond the current suites: auth endpoints, outfits, and
+      the client beyond pure logic — there are 38 client tests, but they cover
+      geometry and queueing only, with no component or end-to-end tests
 - [ ] Deployment target and process
 - [ ] Error monitoring
 - [ ] Accessibility pass
