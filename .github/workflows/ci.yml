@@ -61,8 +61,15 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
-      - name: Test
-        run: npm test
+      # Split rather than one `npm test`, which already runs both: as a single
+      # step a failure only says "Test", and the two suites fail for unrelated
+      # reasons — the server suite needs the Postgres service, the client suite
+      # needs nothing. Separate steps name the culprit in the Actions summary.
+      - name: Test (server)
+        run: npm run test:server
+
+      - name: Test (client)
+        run: npm run test:client
 
       - name: Build
         run: npm run build
