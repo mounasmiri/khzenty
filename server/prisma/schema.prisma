@@ -1,7 +1,25 @@
 // Khzenty database schema.
 //
-// Scope: the wardrobe data model only. Authentication credentials are
-// deliberately absent — they arrive with the auth phase.
+// Covers accounts, the wardrobe and outfits.
+//
+// `User.passwordHash` holds an Argon2id digest and is never selected into an
+// API response — the auth service projects through PUBLIC_USER_SELECT, so the
+// column is absent from responses by construction rather than stripped
+// afterwards.
+//
+// `Outfit` and `OutfitItem` are modelled but not yet exposed: there are no
+// outfit endpoints. The item response carries an outfit count, which is the
+// only thing currently reading them.
+//
+// Field-level comments carry the reasoning for anything non-obvious. Two
+// invariants the database cannot express, and which therefore live in the
+// service layer, are worth knowing before changing this file:
+//
+//   - `type` implies `category`, but both are plain enum columns. The server
+//     derives the category and ignores any sent by a client, which is what
+//     makes a mismatched pair unrepresentable.
+//   - `imageUrl` and `imagePublicId` are written and cleared together. Losing
+//     the public id orphans the Cloudinary asset behind it.
 
 generator client {
   provider = "prisma-client"
