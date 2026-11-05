@@ -1,5 +1,6 @@
 import { ApiError } from '@/lib/api';
 import { clothingApi } from './api';
+import { removeGarmentBackground } from './background-removal';
 import { compressImage } from './compress-image';
 import type { ClothingItem } from './types';
 import { UploadError, uploadItemImage } from './upload';
@@ -15,7 +16,7 @@ import type { UploadStage } from './upload';
 export const DRAFT_TYPE = 'OTHER';
 
 /** Stages worth reporting, including the client-side work before upload. */
-export type DraftStage = 'compressing' | UploadStage;
+export type DraftStage = 'removing-background' | 'compressing' | UploadStage;
 
 export interface DraftResult {
   item: ClothingItem;
@@ -45,15 +46,15 @@ function messageFor(error: unknown): string {
 export async function createDraftFromPhoto(
   file: File,
   onStage?: (stage: DraftStage) => void,
+  options: { removeBackground?: boolean } = {},
 ): Promise<DraftResult> {
-  onStage?.('compressing');
-  const compressed = await compressImage(file);
+  const prepared = await preparePhoto(file, options.removeBackground ?? false, onStage);
 
   // No colour: the quick-sort screen collects it, and null reads as unset.
   const item = await clothingApi.create({ type: DRAFT_TYPE });
 
   try {
-    await uploadItemImage(item.id, compressed, (stage) => onStage?.(stage));
+    await uploadItemImage(item.id, prepared, (stage) => onStage?.(stage));
   } catch (error) {
     return { item, imageError: messageFor(error) };
   }
@@ -69,13 +70,47 @@ export async function retryDraftPhoto(
   itemId: string,
   file: File,
   onStage?: (stage: DraftStage) => void,
+  options: { removeBackground?: boolean } = {},
 ): Promise<string | undefined> {
   try {
-    onStage?.('compressing');
-    const compressed = await compressImage(file);
-    await uploadItemImage(itemId, compressed, (stage) => onStage?.(stage));
+    const prepared = await preparePhoto(file, options.removeBackground ?? false, onStage);
+    await uploadItemImage(itemId, prepared, (stage) => onStage?.(stage));
     return undefined;
   } catch (error) {
     return messageFor(error);
   }
+}
+
+/**
+ * Produces the file to upload.
+ *
+ * With background removal on, the cutout is already a square WebP capped at
+ * 1200px and must **not** then go through `compressImage` — that re-encodes as
+ * JPEG, which has no alpha, and would flatten the garment onto black, baking in
+ * exactly the background the cutout just removed.
+ *
+ * A removal failure falls back to the compressed original rather than
+ * abandoning the photo: the garment still gets catalogued, just with its
+ * background.
+ */
+async function preparePhoto(
+  file: File,
+  removeBackgroundFirst: boolean,
+  onStage?: (stage: DraftStage) => void,
+): Promise<File> {
+  if (removeBackgroundFirst) {
+    onStage?.('removing-background');
+
+    try {
+      // Runs on the app-wide sequential queue, so a batch processes one photo
+      // at a time however many are in flight.
+      const { file: cutout } = await removeGarmentBackground(file);
+      return cutout;
+    } catch {
+      // Fall through to the ordinary path with the original photo.
+    }
+  }
+
+  onStage?.('compressing');
+  return compressImage(file);
 }

@@ -21,6 +21,7 @@ export interface BulkEntry {
 
 export const STATUS_LABEL: Record<string, string> = {
   queued: 'Waiting',
+  'removing-background': 'Removing background',
   compressing: 'Resizing',
   signing: 'Preparing',
   uploading: 'Uploading',
@@ -34,8 +35,17 @@ let nextId = 0;
 export function useBulkAdd() {
   const [entries, setEntries] = useState<BulkEntry[]>([]);
   const [running, setRunning] = useState(false);
+  /** Opt-in: background removal is slow and downloads a large model. */
+  const [removeBackgrounds, setRemoveBackgrounds] = useState(false);
+  // Read inside async tasks, where the state value would be a stale closure.
+  const removeBackgroundsRef = useRef(false);
   // Read inside async tasks, where the state value would be a stale closure.
   const entriesRef = useRef<BulkEntry[]>([]);
+
+  const setRemoveBackgroundsSynced = useCallback((value: boolean) => {
+    removeBackgroundsRef.current = value;
+    setRemoveBackgrounds(value);
+  }, []);
 
   const sync = useCallback((next: BulkEntry[]) => {
     entriesRef.current = next;
@@ -71,8 +81,11 @@ export function useBulkAdd() {
       try {
         if (entry.itemId) {
           // The garment already exists; only the photo needs another attempt.
-          const error = await retryDraftPhoto(entry.itemId, entry.file, (stage) =>
-            patch(entry.id, { status: stage }),
+          const error = await retryDraftPhoto(
+            entry.itemId,
+            entry.file,
+            (stage) => patch(entry.id, { status: stage }),
+            { removeBackground: removeBackgroundsRef.current },
           );
 
           patch(entry.id, {
@@ -82,8 +95,10 @@ export function useBulkAdd() {
           return;
         }
 
-        const result = await createDraftFromPhoto(entry.file, (stage) =>
-          patch(entry.id, { status: stage }),
+        const result = await createDraftFromPhoto(
+          entry.file,
+          (stage) => patch(entry.id, { status: stage }),
+          { removeBackground: removeBackgroundsRef.current },
         );
 
         patch(entry.id, {
@@ -115,9 +130,13 @@ export function useBulkAdd() {
       setRunning(true);
 
       try {
+        // One at a time while removing backgrounds: the model is the
+        // bottleneck and already serialises on its own queue, so a wider
+        // limit would only queue uploads behind it and muddle the progress
+        // each row reports.
         await runWithConcurrency(
           targets.map((entry) => () => processEntry(entry)),
-          UPLOAD_CONCURRENCY,
+          removeBackgroundsRef.current ? 1 : UPLOAD_CONCURRENCY,
         );
       } finally {
         setRunning(false);
@@ -134,5 +153,15 @@ export function useBulkAdd() {
   /** Ids of every garment created, in picked order — the quick-sort queue. */
   const createdIds = entries.flatMap((e) => (e.itemId ? [e.itemId] : []));
 
-  return { entries, running, addFiles, run, retryFailed, reset, createdIds };
+  return {
+    entries,
+    running,
+    addFiles,
+    run,
+    retryFailed,
+    reset,
+    createdIds,
+    removeBackgrounds,
+    setRemoveBackgrounds: setRemoveBackgroundsSynced,
+  };
 }
