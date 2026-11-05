@@ -2,8 +2,8 @@
   "name": "khzenty",
   "version": "0.1.0",
   "private": true,
-  "description": "Khzenty \u00e2\u20ac\u201d a modern wardrobe assistant. Root orchestration scripts.",
-  "license": "MIT",
+  "description": "Khzenty — a modern wardrobe assistant. Root orchestration scripts.",
+  "license": "AGPL-3.0-or-later",
   "scripts": {
     "dev": "concurrently -n api,web -c blue,magenta \"cd server && npm run dev\" \"cd client && npm run dev\"",
     "dev:server": "cd server && npm run dev",
