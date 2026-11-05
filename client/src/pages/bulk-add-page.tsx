@@ -13,7 +13,17 @@ import { STATUS_LABEL, UPLOAD_CONCURRENCY, useBulkAdd } from '@/features/clothin
  */
 export function BulkAddPage() {
   const navigate = useNavigate();
-  const { entries, running, addFiles, run, retryFailed, reset, createdIds } = useBulkAdd();
+  const {
+    entries,
+    running,
+    addFiles,
+    run,
+    retryFailed,
+    reset,
+    createdIds,
+    removeBackgrounds,
+    setRemoveBackgrounds,
+  } = useBulkAdd();
 
   const queued = entries.filter((e) => e.status === 'queued').length;
   const failed = entries.filter((e) => e.status === 'failed').length;
@@ -51,6 +61,25 @@ export function BulkAddPage() {
           className="sr-only"
         />
 
+        {/* Opt-in, never automatic: the first run downloads a ~40 MB model and
+            each photo then takes seconds. */}
+        <label className="flex items-start gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={removeBackgrounds}
+            disabled={running}
+            onChange={(event) => setRemoveBackgrounds(event.target.checked)}
+            className="mt-0.5"
+          />
+          <span>
+            Remove backgrounds
+            <span className="text-muted-foreground block text-xs">
+              Processes one photo at a time and is much slower. Downloads a ~40 MB model on
+              first use. A photo that fails keeps its background rather than being skipped.
+            </span>
+          </span>
+        </label>
+
         <div className="flex flex-wrap items-center gap-2">
           <Button type="button" disabled={running || queued === 0} onClick={() => void run()}>
             {running ? 'Uploading…' : `Upload ${String(queued)} photo${queued === 1 ? '' : 's'}`}
@@ -71,8 +100,10 @@ export function BulkAddPage() {
 
         <p aria-live="polite" className="text-muted-foreground text-xs">
           {running
-            ? `Uploading ${String(UPLOAD_CONCURRENCY)} at a time — ${String(done)} of ${String(entries.length)} done.`
-            : `Resized to 1200px before upload. ${String(UPLOAD_CONCURRENCY)} upload at a time.`}
+            ? `${removeBackgrounds ? 'One at a time' : `${String(UPLOAD_CONCURRENCY)} at a time`} — ${String(done)} of ${String(entries.length)} done.`
+            : removeBackgrounds
+              ? 'One photo at a time while removing backgrounds.'
+              : `Resized to 1200px before upload. ${String(UPLOAD_CONCURRENCY)} uploads at a time.`}
         </p>
       </div>
 

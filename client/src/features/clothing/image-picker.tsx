@@ -3,6 +3,7 @@ import type { ChangeEvent } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { BackgroundRemovalError, removeGarmentBackground } from './background-removal';
 import { GarmentImage } from './garment-image';
 
 interface ImagePickerProps {
@@ -39,6 +40,64 @@ export function ImagePicker({
   const [removing, setRemoving] = useState(false);
 
   /**
+   * A finished cutout awaiting a decision. Held here rather than handed
+   * straight to the parent, so the original stays available for the
+   * side-by-side and for "Keep original".
+   */
+  const [cutout, setCutout] = useState<{ file: File; url: string } | null>(null);
+  const [cuttingOut, setCuttingOut] = useState(false);
+  const [progressLabel, setProgressLabel] = useState<string | null>(null);
+  const [cutoutError, setCutoutError] = useState<string | null>(null);
+
+  // The cutout's object URL outlives the effect above, so it is revoked by
+  // hand when replaced, accepted or discarded.
+  function discardCutout() {
+    setCutout((current) => {
+      if (current) URL.revokeObjectURL(current.url);
+      return null;
+    });
+  }
+
+  async function runBackgroundRemoval() {
+    if (!file || cuttingOut) return;
+
+    setCutoutError(null);
+    setCuttingOut(true);
+    discardCutout();
+    setProgressLabel('Starting…');
+
+    try {
+      const result = await removeGarmentBackground(file, ({ key, current, total }) => {
+        // The first run downloads ~40 MB, so silence here reads as a hang.
+        const percent = total > 0 ? Math.round((current / total) * 100) : 0;
+        setProgressLabel(`Loading ${key} ${String(percent)}%`);
+      });
+
+      setProgressLabel('Finishing…');
+      setCutout({ file: result.file, url: URL.createObjectURL(result.file) });
+    } catch (error) {
+      // Never destructive: the picked photo is untouched and still uploads.
+      setCutoutError(
+        error instanceof BackgroundRemovalError
+          ? error.message
+          : 'Background removal failed. The original photo will be used.',
+      );
+    } finally {
+      setCuttingOut(false);
+      setProgressLabel(null);
+    }
+  }
+
+  function useCutout() {
+    if (!cutout) return;
+
+    // Hand the cutout to the parent; from here it is the file that uploads.
+    onSelect(cutout.file);
+    URL.revokeObjectURL(cutout.url);
+    setCutout(null);
+  }
+
+  /**
    * Object URLs hold the file in memory until revoked, so each one is cleaned
    * up when the selection changes or the component unmounts.
    */
@@ -61,10 +120,15 @@ export function ImagePicker({
   const shown = previewUrl ?? existingUrl;
 
   function handleChange(event: ChangeEvent<HTMLInputElement>) {
+    // A new pick invalidates any pending cutout of the previous photo.
+    discardCutout();
+    setCutoutError(null);
     onSelect(event.target.files?.[0] ?? null);
   }
 
   function clear() {
+    discardCutout();
+    setCutoutError(null);
     onSelect(null);
 
     // Reset the input's value too, otherwise re-picking the same file fires no
@@ -152,6 +216,20 @@ export function ImagePicker({
             )
           ) : null}
 
+          {/* Only offered once a photo is staged, and never run automatically:
+              it is a slow, large download the user should opt into. */}
+          {file && !cutout ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={disabled || cuttingOut}
+              onClick={() => void runBackgroundRemoval()}
+            >
+              {cuttingOut ? 'Removing background…' : 'Remove background'}
+            </Button>
+          ) : null}
+
           <p className="text-muted-foreground text-xs">
             {file
               ? 'Uploads after the item is saved.'
@@ -161,6 +239,63 @@ export function ImagePicker({
           </p>
         </div>
       </div>
+
+      {cuttingOut ? (
+        <p aria-live="polite" className="text-muted-foreground text-xs">
+          {progressLabel ?? 'Working…'} — the model downloads once, then is cached.
+        </p>
+      ) : null}
+
+      {cutoutError ? (
+        <p role="alert" className="text-destructive text-sm">
+          {cutoutError}
+        </p>
+      ) : null}
+
+      {/* Before and after, side by side on the same surface the wardrobe uses,
+          so the comparison reflects how each will actually look. */}
+      {cutout && previewUrl ? (
+        <div className="flex flex-col gap-3 rounded-lg border p-3">
+          <p className="text-sm font-medium">Keep the cutout?</p>
+
+          <div className="flex gap-3">
+            <figure className="flex flex-col gap-1">
+              <GarmentImage
+                src={previewUrl}
+                alt="Original photo"
+                placeholder=""
+                className="size-28 rounded-md border"
+              />
+              <figcaption className="text-muted-foreground text-xs">Original</figcaption>
+            </figure>
+
+            <figure className="flex flex-col gap-1">
+              <GarmentImage
+                src={cutout.url}
+                alt="Background removed"
+                placeholder=""
+                className="size-28 rounded-md border"
+              />
+              <figcaption className="text-muted-foreground text-xs">Cutout</figcaption>
+            </figure>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" size="sm" disabled={disabled} onClick={useCutout}>
+              Use cutout
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              disabled={disabled}
+              onClick={discardCutout}
+            >
+              Keep original
+            </Button>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
