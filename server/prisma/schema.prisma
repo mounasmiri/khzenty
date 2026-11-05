@@ -99,6 +99,7 @@ enum ClothingType {
   JEWELRY
   SUNGLASSES
   GLOVES
+  WATCH
 
   // UNDERWEAR
   UNDERWEAR

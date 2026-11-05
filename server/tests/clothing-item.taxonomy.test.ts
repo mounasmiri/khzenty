@@ -54,6 +54,13 @@ describe('category derivation', () => {
     expect(res.body.item.category).toBe('OTHER');
   });
 
+  it('derives ACCESSORY from WATCH', async () => {
+    const res = await agent.post('/api/items').send({ type: 'WATCH', color: 'Silver' }).expect(201);
+
+    expect(res.body.item.type).toBe('WATCH');
+    expect(res.body.item.category).toBe('ACCESSORY');
+  });
+
   it('ignores a category sent by the client', async () => {
     const res = await agent
       .post('/api/items')
@@ -155,6 +162,26 @@ describe('category derivation', () => {
 
     expect(res.body.taxonomy).toHaveLength(11);
     const types = res.body.taxonomy.flatMap((g: { types: string[] }) => g.types);
-    expect(types).toHaveLength(39);
+    expect(types).toHaveLength(40);
+    expect(types).toContain('WATCH');
+  });
+
+  it('serves a board zone for every type it serves a category for', async () => {
+    const res = await agent.get('/api/taxonomy').expect(200);
+
+    const types: string[] = res.body.taxonomy.flatMap((g: { types: string[] }) => g.types);
+    const zones = res.body.boardZones as Record<string, string>;
+
+    // The board picks items from this taxonomy, so anything offered here must
+    // have somewhere to land. A type served without a zone would vanish from
+    // the board after being picked.
+    for (const type of types) {
+      expect(zones[type], `${type} was served without a board zone`).toBeTruthy();
+    }
+
+    expect(zones.BAG).toBe('BAG');
+    expect(zones.WATCH).toBe('ACCESSORY');
+    expect(zones.SUNGLASSES).toBe('ACCESSORY');
+    expect(zones.JEWELRY).toBe('ACCESSORY');
   });
 });
