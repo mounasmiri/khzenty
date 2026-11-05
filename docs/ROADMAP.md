@@ -223,5 +223,17 @@ These are real work with no natural home in the sequence above:
       the client beyond pure logic — there are 38 client tests, but they cover
       geometry and queueing only, with no component or end-to-end tests
 - [ ] Deployment target and process
+
+  **Before any public deploy:** resolve the AGPL / source-availability question
+  for the background-removal library, and self-host the model files.
+
+  Both are consequences of `@imgly/background-removal` being AGPL-3.0. The
+  project relicensed to match (`d671f3a`), but AGPL §13 attaches obligations to
+  *conveying* the work over a network, so a public deploy needs a decided
+  answer on offering corresponding source — not just a matching licence file.
+  The model and WASM currently come from IMG.LY's CDN at runtime, which makes a
+  third party a hard dependency of the feature; self-hosting them removes that
+  and is what IMG.LY themselves advise for production.
+
 - [ ] Error monitoring
 - [ ] Accessibility pass
