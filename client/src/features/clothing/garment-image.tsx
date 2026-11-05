@@ -50,7 +50,14 @@ export function GarmentImage({
           alt={alt}
           // max-* rather than size-full: with object-contain this keeps the
           // intrinsic aspect ratio and letterboxes against the surface.
-          className={`max-h-full max-w-full object-contain ${imageClassName}`}
+          //
+          // `drop-shadow` follows the alpha channel, so on a cutout it traces
+          // the garment's silhouette — which is what stops a white shirt
+          // disappearing into a light tile. On an opaque photo it falls on the
+          // image's edges instead and reads as a subtle card. Applied to both
+          // because nothing here can tell them apart without guessing from the
+          // file extension.
+          className={`max-h-full max-w-full object-contain drop-shadow-[0_2px_5px_var(--garment-shadow)] ${imageClassName}`}
           {...(lazy ? { loading: 'lazy' as const } : {})}
         />
       ) : (

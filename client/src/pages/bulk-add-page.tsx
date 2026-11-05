@@ -1,8 +1,14 @@
+import { useState } from 'react';
 import type { ChangeEvent } from 'react';
 import { Link, useNavigate } from 'react-router';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+  acknowledgeModelDownload,
+  hasAcknowledgedModelDownload,
+} from '@/features/clothing/bg-removal-consent';
+import { ModelDownloadNotice } from '@/features/clothing/model-download-notice';
 import { STATUS_LABEL, UPLOAD_CONCURRENCY, useBulkAdd } from '@/features/clothing/use-bulk-add';
 
 /**
@@ -24,6 +30,19 @@ export function BulkAddPage() {
     removeBackgrounds,
     setRemoveBackgrounds,
   } = useBulkAdd();
+
+  /** Shown when the toggle is switched on before the download is agreed to. */
+  const [askingConsent, setAskingConsent] = useState(false);
+
+  /** Only gates turning it ON; switching it off never needs consent. */
+  function toggleRemoveBackgrounds(next: boolean) {
+    if (next && !hasAcknowledgedModelDownload()) {
+      setAskingConsent(true);
+      return;
+    }
+
+    setRemoveBackgrounds(next);
+  }
 
   const queued = entries.filter((e) => e.status === 'queued').length;
   const failed = entries.filter((e) => e.status === 'failed').length;
@@ -68,7 +87,7 @@ export function BulkAddPage() {
             type="checkbox"
             checked={removeBackgrounds}
             disabled={running}
-            onChange={(event) => setRemoveBackgrounds(event.target.checked)}
+            onChange={(event) => toggleRemoveBackgrounds(event.target.checked)}
             className="mt-0.5"
           />
           <span>
@@ -79,6 +98,18 @@ export function BulkAddPage() {
             </span>
           </span>
         </label>
+
+        {askingConsent ? (
+          <ModelDownloadNotice
+            context="Each photo in the batch is then processed one at a time."
+            onConfirm={() => {
+              acknowledgeModelDownload();
+              setAskingConsent(false);
+              setRemoveBackgrounds(true);
+            }}
+            onCancel={() => setAskingConsent(false)}
+          />
+        ) : null}
 
         <div className="flex flex-wrap items-center gap-2">
           <Button type="button" disabled={running || queued === 0} onClick={() => void run()}>

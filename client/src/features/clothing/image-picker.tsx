@@ -4,6 +4,8 @@ import type { ChangeEvent } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { BackgroundRemovalError, removeGarmentBackground } from './background-removal';
+import { acknowledgeModelDownload, hasAcknowledgedModelDownload } from './bg-removal-consent';
+import { ModelDownloadNotice } from './model-download-notice';
 import { GarmentImage } from './garment-image';
 
 interface ImagePickerProps {
@@ -48,6 +50,8 @@ export function ImagePicker({
   const [cuttingOut, setCuttingOut] = useState(false);
   const [progressLabel, setProgressLabel] = useState<string | null>(null);
   const [cutoutError, setCutoutError] = useState<string | null>(null);
+  /** Shown instead of running, until the one-off download is agreed to. */
+  const [askingConsent, setAskingConsent] = useState(false);
 
   // The cutout's object URL outlives the effect above, so it is revoked by
   // hand when replaced, accepted or discarded.
@@ -56,6 +60,18 @@ export function ImagePicker({
       if (current) URL.revokeObjectURL(current.url);
       return null;
     });
+  }
+
+  /** Entry point for the button: ask once, then run. */
+  function requestBackgroundRemoval() {
+    if (!file || cuttingOut) return;
+
+    if (!hasAcknowledgedModelDownload()) {
+      setAskingConsent(true);
+      return;
+    }
+
+    void runBackgroundRemoval();
   }
 
   async function runBackgroundRemoval() {
@@ -224,7 +240,7 @@ export function ImagePicker({
               variant="outline"
               size="sm"
               disabled={disabled || cuttingOut}
-              onClick={() => void runBackgroundRemoval()}
+              onClick={requestBackgroundRemoval}
             >
               {cuttingOut ? 'Removing background…' : 'Remove background'}
             </Button>
@@ -239,6 +255,17 @@ export function ImagePicker({
           </p>
         </div>
       </div>
+
+      {askingConsent ? (
+        <ModelDownloadNotice
+          onConfirm={() => {
+            acknowledgeModelDownload();
+            setAskingConsent(false);
+            void runBackgroundRemoval();
+          }}
+          onCancel={() => setAskingConsent(false)}
+        />
+      ) : null}
 
       {cuttingOut ? (
         <p aria-live="polite" className="text-muted-foreground text-xs">
