@@ -58,6 +58,9 @@ jobs:
         run: npm ci
         working-directory: client
 
+      - name: Lint
+        run: npm run lint
+
       - name: Typecheck
         run: npm run typecheck
 
