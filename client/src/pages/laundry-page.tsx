@@ -4,6 +4,7 @@ import { Link } from 'react-router';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { clothingApi } from '@/features/clothing/api';
+import { GarmentImage } from '@/features/clothing/garment-image';
 import { labelFor } from '@/features/clothing/labels';
 import { useWardrobe } from '@/features/clothing/use-wardrobe';
 import { ApiError } from '@/lib/api';
@@ -112,20 +113,13 @@ export function LaundryPage() {
                   to={`/items/${item.id}`}
                   className="flex min-w-0 flex-1 items-center gap-3"
                 >
-                  <div className="flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-md bg-neutral-50 dark:bg-neutral-900">
-                    {item.imageUrl ? (
-                      <img
-                        src={item.imageUrl}
-                        alt=""
-                        className="max-h-full max-w-full object-contain"
-                        loading="lazy"
-                      />
-                    ) : (
-                      <span className="text-muted-foreground px-1 text-center text-[10px]">
-                        {labelFor(item.type)}
-                      </span>
-                    )}
-                  </div>
+                  <GarmentImage
+                    src={item.imageUrl}
+                    alt=""
+                    placeholder={labelFor(item.type)}
+                    className="size-14 shrink-0 rounded-md"
+                    lazy
+                  />
 
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium">

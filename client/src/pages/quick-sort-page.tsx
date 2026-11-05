@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { clothingApi } from '@/features/clothing/api';
 import { DRAFT_TYPE } from '@/features/clothing/drafts';
+import { GarmentImage } from '@/features/clothing/garment-image';
 import { labelFor } from '@/features/clothing/labels';
 import type { ClothingItem } from '@/features/clothing/types';
 import { UNSORTED_COLOR_LABEL } from '@/features/clothing/types';
@@ -201,13 +202,14 @@ export function QuickSortPage() {
 
       {/* Same contain-on-neutral treatment as the grid, so the garment is fully
           visible while deciding what it is. */}
-      <div className="flex aspect-[4/5] w-full max-w-xs items-center justify-center overflow-hidden rounded-lg border bg-neutral-50 dark:bg-neutral-900">
-        {current.imageUrl ? (
-          <img src={current.imageUrl} alt="" className="max-h-full max-w-full object-contain" />
-        ) : (
-          <span className="text-muted-foreground text-sm">No photo</span>
-        )}
-      </div>
+      {/* Same surface and tile as the grid, so the garment is fully visible
+          while deciding what it is. */}
+      <GarmentImage
+        src={current.imageUrl}
+        alt=""
+        placeholder="No photo"
+        className="aspect-[4/5] w-full max-w-xs rounded-lg border"
+      />
 
       <div className="flex max-w-md flex-col gap-2">
         <div className="flex items-center gap-2">

@@ -55,6 +55,7 @@ Deliberately deferred so scope stays honest:
 | Prisma models | None until needed | Data model designed with the feature that uses it |
 | Prisma driver | `@prisma/adapter-pg` | Required in v7 — the Rust query engine was removed |
 | Server watch | `node --watch --import tsx` | `tsx watch` silently fails to start under `concurrently` |
+| Garment photo surface | One `--garment-surface` token, via a shared `GarmentImage` | Cutouts are stored transparent with no colour baked in, so a single token decides what shows through everywhere |
 
 ## Current state
 

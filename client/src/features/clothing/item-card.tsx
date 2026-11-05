@@ -1,6 +1,7 @@
 import { Link } from 'react-router';
 
 import { Badge } from '@/components/ui/badge';
+import { GarmentImage } from './garment-image';
 import { labelFor } from './labels';
 import { LaundryToggle } from './laundry-toggle';
 import type { ClothingItem, LaundryStatus } from './types';
@@ -28,33 +29,23 @@ export function ItemCard({ item, onLaundryChange }: ItemCardProps) {
         to={`/items/${item.id}`}
         className="focus-visible:ring-ring hover:bg-accent -m-1 flex flex-col gap-2 rounded-md p-1 transition-colors focus-visible:ring-2 focus-visible:outline-none"
       >
-        {/* `object-contain`, not `object-cover`: garment photos arrive at every
-            aspect ratio, and cropping to fill the tile cut the toes off shoes and
-            the hems off trousers. Letterboxing on a light neutral ground shows
-            the whole garment, and the fixed 4:5 tile — matching the detail view —
-            keeps rows aligned despite the varying image shapes. */}
-        <div className="relative flex aspect-[4/5] items-center justify-center overflow-hidden rounded-md bg-neutral-50 dark:bg-neutral-900">
-          {item.imageUrl ? (
-            <img
-              src={item.imageUrl}
-              alt={item.name ?? labelFor(item.type)}
-              // Dimmed while in the wash, so the grid reads at a glance.
-              className={`max-h-full max-w-full object-contain ${inLaundry ? 'opacity-50' : ''}`}
-              loading="lazy"
-            />
-          ) : (
-            // The grid has to read well without photos: many garments have none.
-            <span className="text-muted-foreground px-2 text-center text-xs">
-              {labelFor(item.type)}
-            </span>
-          )}
-
+        {/* The fixed 4:5 tile matches the detail view, so rows stay aligned
+            despite the varying shapes of the photos inside. */}
+        <GarmentImage
+          src={item.imageUrl}
+          alt={item.name ?? labelFor(item.type)}
+          placeholder={labelFor(item.type)}
+          className="aspect-[4/5] rounded-md"
+          // Dimmed while in the wash, so the grid reads at a glance.
+          imageClassName={inLaundry ? 'opacity-50' : ''}
+          lazy
+        >
           {inLaundry ? (
             <Badge variant="secondary" className="absolute top-1 left-1 text-[10px]">
               {LAUNDRY_LABEL.IN_LAUNDRY}
             </Badge>
           ) : null}
-        </div>
+        </GarmentImage>
 
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">

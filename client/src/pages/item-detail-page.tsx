@@ -4,6 +4,7 @@ import { Link, useNavigate, useParams } from 'react-router';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { clothingApi } from '@/features/clothing/api';
+import { GarmentImage } from '@/features/clothing/garment-image';
 import { labelFor } from '@/features/clothing/labels';
 import { LaundryToggle } from '@/features/clothing/laundry-toggle';
 import type { LaundryStatus } from '@/features/clothing/types';
@@ -101,25 +102,13 @@ export function ItemDetailPage() {
       </div>
 
       <div className="flex flex-col items-start gap-3">
-        {/* object-contain on a light neutral ground: garments are shot at all
-            sorts of aspect ratios, and cropping cuts off shoes and hems. The
-            4:5 tile matches the grid so the two read as one system. */}
-        <div className="flex aspect-[4/5] w-full max-w-xs items-center justify-center overflow-hidden rounded-lg border bg-neutral-50 dark:bg-neutral-900">
-          {shownImageUrl ? (
-            <img
-              src={shownImageUrl}
-              alt={item.name ?? labelFor(item.type)}
-              className="max-h-full max-w-full object-contain"
-            />
-          ) : (
-            // Same fallback as the grid: the type label, so an item without a
-            // photo is still identifiable.
-            <div className="text-muted-foreground p-6 text-center">
-              <p className="text-sm font-medium">{labelFor(item.type)}</p>
-              <p className="mt-1 text-xs">No photo yet</p>
-            </div>
-          )}
-        </div>
+        {/* The 4:5 tile matches the grid, so the two read as one system. */}
+        <GarmentImage
+          src={shownImageUrl}
+          alt={item.name ?? labelFor(item.type)}
+          placeholder={`${labelFor(item.type)} — no photo yet`}
+          className="aspect-[4/5] w-full max-w-xs rounded-lg border"
+        />
 
         {shownImageUrl ? (
           confirmingPhotoRemoval ? (
