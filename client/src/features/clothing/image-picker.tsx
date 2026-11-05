@@ -3,6 +3,7 @@ import type { ChangeEvent } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { GarmentImage } from './garment-image';
 
 interface ImagePickerProps {
   /** The image already stored on the item, if any. */
@@ -78,17 +79,14 @@ export function ImagePicker({
       <Label htmlFor="photo">Photo (optional)</Label>
 
       <div className="flex items-start gap-3">
-        {/* Contain here too, on the same neutral ground as the grid and detail
-            tiles: the preview should show what will be stored, not a crop. */}
-        <div className="flex size-24 shrink-0 items-center justify-center overflow-hidden rounded-md border bg-neutral-50 dark:bg-neutral-900">
-          {shown ? (
-            <img src={shown} alt="" className="max-h-full max-w-full object-contain" />
-          ) : (
-            <span className="text-muted-foreground px-1 text-center text-[10px] leading-tight">
-              {placeholder}
-            </span>
-          )}
-        </div>
+        {/* The same surface as the grid and detail tiles, so the preview shows
+            the garment exactly as it will appear once stored. */}
+        <GarmentImage
+          src={shown}
+          alt=""
+          placeholder={placeholder}
+          className="size-24 shrink-0 rounded-md border"
+        />
 
         <div className="flex flex-col items-start gap-2">
           <input
