@@ -3,7 +3,11 @@ import type { ChangeEvent } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { BackgroundRemovalError, removeGarmentBackground } from './background-removal';
+import {
+  BackgroundRemovalError,
+  fetchStoredImage,
+  removeGarmentBackground,
+} from './background-removal';
 import { acknowledgeModelDownload, hasAcknowledgedModelDownload } from './bg-removal-consent';
 import { ModelDownloadNotice } from './model-download-notice';
 import { GarmentImage } from './garment-image';
@@ -62,9 +66,15 @@ export function ImagePicker({
     });
   }
 
+  /**
+   * Either source works: a freshly picked file, or the photo already stored on
+   * the item. The stored one has to be fetched back first.
+   */
+  const canRemoveBackground = Boolean(file ?? existingUrl);
+
   /** Entry point for the button: ask once, then run. */
   function requestBackgroundRemoval() {
-    if (!file || cuttingOut) return;
+    if (!canRemoveBackground || cuttingOut) return;
 
     if (!hasAcknowledgedModelDownload()) {
       setAskingConsent(true);
@@ -75,7 +85,7 @@ export function ImagePicker({
   }
 
   async function runBackgroundRemoval() {
-    if (!file || cuttingOut) return;
+    if (!canRemoveBackground || cuttingOut) return;
 
     setCutoutError(null);
     setCuttingOut(true);
@@ -83,7 +93,10 @@ export function ImagePicker({
     setProgressLabel('Starting…');
 
     try {
-      const result = await removeGarmentBackground(file, ({ key, current, total }) => {
+      // A staged pick wins; otherwise read the stored photo back off its URL.
+      const source = file ?? (await fetchStoredImage(existingUrl as string));
+
+      const result = await removeGarmentBackground(source, ({ key, current, total }) => {
         // The first run downloads ~40 MB, so silence here reads as a hang.
         const percent = total > 0 ? Math.round((current / total) * 100) : 0;
         setProgressLabel(`Loading ${key} ${String(percent)}%`);
@@ -234,7 +247,7 @@ export function ImagePicker({
 
           {/* Only offered once a photo is staged, and never run automatically:
               it is a slow, large download the user should opt into. */}
-          {file && !cutout ? (
+          {canRemoveBackground && !cutout ? (
             <Button
               type="button"
               variant="outline"
@@ -250,7 +263,7 @@ export function ImagePicker({
             {file
               ? 'Uploads after the item is saved.'
               : existingUrl
-                ? 'Pick a new file to replace this photo.'
+                ? 'Pick a new file, or remove the background of this one. Either way it replaces the photo when you save.'
                 : 'JPG, PNG, WebP or AVIF.'}
           </p>
         </div>
@@ -281,14 +294,14 @@ export function ImagePicker({
 
       {/* Before and after, side by side on the same surface the wardrobe uses,
           so the comparison reflects how each will actually look. */}
-      {cutout && previewUrl ? (
+      {cutout && shown ? (
         <div className="flex flex-col gap-3 rounded-lg border p-3">
           <p className="text-sm font-medium">Keep the cutout?</p>
 
           <div className="flex gap-3">
             <figure className="flex flex-col gap-1">
               <GarmentImage
-                src={previewUrl}
+                src={shown}
                 alt="Original photo"
                 placeholder=""
                 className="size-28 rounded-md border"

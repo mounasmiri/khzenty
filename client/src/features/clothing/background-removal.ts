@@ -28,6 +28,47 @@ export class BackgroundRemovalError extends Error {
 }
 
 /**
+ * Reads a photo already stored on an item back into a `File`, so it can be fed
+ * through the same removal flow as a freshly picked one.
+ *
+ * This is a cross-origin read: the image lives on Cloudinary, and the browser
+ * only hands us the bytes if that host returns permissive CORS headers. The
+ * failure is reported plainly rather than as a generic error, because the user
+ * has a usable way around it — re-pick the file from disk — and no way at all
+ * of guessing that from "something went wrong".
+ *
+ * `credentials: 'omit'` so no session cookie is sent to a third-party host.
+ */
+export async function fetchStoredImage(url: string): Promise<File> {
+  let response: Response;
+
+  try {
+    response = await fetch(url, { mode: 'cors', credentials: 'omit' });
+  } catch {
+    // fetch only rejects on a network or CORS failure, never on a 4xx.
+    throw new BackgroundRemovalError(
+      'Could not read the stored photo — the image host did not allow this page to fetch it. Pick the file again to remove its background.',
+    );
+  }
+
+  if (!response.ok) {
+    throw new BackgroundRemovalError(
+      `Could not read the stored photo (${String(response.status)}). Pick the file again to remove its background.`,
+    );
+  }
+
+  const blob = await response.blob();
+
+  if (!blob.type.startsWith('image/')) {
+    throw new BackgroundRemovalError('The stored photo did not come back as an image.');
+  }
+
+  // Extensionless on purpose: compressImage renames by MIME type anyway, and
+  // the stored name carries no information worth preserving here.
+  return new File([blob], 'stored-photo', { type: blob.type });
+}
+
+/**
  * One queue for the whole app, so only one run happens at a time no matter how
  * many components ask. Bulk add relies on this for its sequential processing
  * rather than implementing its own ordering.
