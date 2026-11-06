@@ -2,21 +2,10 @@ import { useMemo } from 'react';
 
 import { GarmentImage } from '@/features/clothing/garment-image';
 import { labelFor } from '@/features/clothing/labels';
+import { BOARD_ASPECT_RATIO_CSS, BOARD_INSET_CSS } from './board-geometry';
 import type { BoardLayout } from './board-layout';
 import { layoutForGarments, layoutMatchesGarments } from './garment-layout';
 import type { BoardZoneMap, OutfitGarment } from './types';
-
-/**
- * Inset of the garments from the board's edge, so nothing is flush against it.
- *
- * Applied as a percentage inset on an inner wrapper rather than as padding on
- * the board: an absolutely positioned child's percentages resolve against the
- * padding box, so padding would not actually move anything in.
- */
-const BOARD_INSET = '4%';
-
-/** Taller than wide, like a person. Also what a phone screen has room for. */
-export const BOARD_ASPECT_RATIO = '4 / 5';
 
 interface OutfitBoardProps {
   garments: readonly OutfitGarment[];
@@ -75,11 +64,16 @@ export function OutfitBoard({
     <div
       ref={exportRef}
       className={`bg-garment-surface relative w-full overflow-hidden rounded-lg border ${className}`}
-      style={{ aspectRatio: BOARD_ASPECT_RATIO }}
+      style={{ aspectRatio: BOARD_ASPECT_RATIO_CSS }}
     >
       <div
         className="absolute"
-        style={{ top: BOARD_INSET, right: BOARD_INSET, bottom: BOARD_INSET, left: BOARD_INSET }}
+        style={{
+          top: BOARD_INSET_CSS,
+          right: BOARD_INSET_CSS,
+          bottom: BOARD_INSET_CSS,
+          left: BOARD_INSET_CSS,
+        }}
       >
         {placements.map((placement) => {
           const garment = byId.get(placement.itemId);

@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { labelFor } from '@/features/clothing/labels';
 import type { ClothingItem } from '@/features/clothing/types';
 import { outfitsApi } from './api';
+import { BoardExportError, downloadBlob, exportBoardPng, exportFileName } from './export-board';
 import { GarmentPicker } from './garment-picker';
 import { layoutForGarments } from './garment-layout';
 import { OutfitBoard } from './outfit-board';
@@ -66,6 +67,8 @@ export function OutfitEditor({ items, zones, outfit }: OutfitEditorProps) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   const toggleGarment = useCallback((id: string) => {
     setSelectedIds((current) =>
@@ -110,9 +113,19 @@ export function OutfitEditor({ items, zones, outfit }: OutfitEditorProps) {
     });
   }, [selectable, selectedIds]);
 
-  // Computed here and handed to the board, so what is stored is exactly what
-  // was on screen. The board would otherwise derive its own and the two could
-  // differ after a zone change.
+  /**
+   * Computed once here and handed to the board, the save and the PNG export,
+   * so all three are the same object rather than three computations that could
+   * diverge.
+   *
+   * Recomputed from the current garments rather than reusing `outfit.layout`:
+   * the editor is where things change, and saving stores this, so showing it is
+   * what makes the screen honest about what a save will do. The outfits list
+   * shows the stored layout instead, which is what the user last composed.
+   * They only differ if the zone mapping changed between the two, and then
+   * opening the editor is exactly when the user should see the new
+   * arrangement.
+   */
   const layout = useMemo(() => layoutForGarments(garments, zones), [garments, zones]);
 
   const trimmedName = name.trim();
@@ -147,6 +160,25 @@ export function OutfitEditor({ items, zones, outfit }: OutfitEditorProps) {
     }
   };
 
+  const download = async () => {
+    setExporting(true);
+    setExportError(null);
+
+    try {
+      // The same layout the board is displaying, so the PNG is what was on
+      // screen rather than a second computation of it.
+      const blob = await exportBoardPng({ garments, zones, layout });
+
+      downloadBlob(blob, exportFileName(trimmedName || outfit?.name || 'outfit'));
+    } catch (caught) {
+      setExportError(
+        caught instanceof BoardExportError ? caught.message : 'The board could not be exported.',
+      );
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const remove = async () => {
     if (!outfit) return;
 
@@ -170,7 +202,7 @@ export function OutfitEditor({ items, zones, outfit }: OutfitEditorProps) {
           the wide layout so it stays visible while the picker scrolls. */}
       <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
         <div className="space-y-4 lg:sticky lg:top-4">
-          <OutfitBoard garments={garments} zones={zones} />
+          <OutfitBoard garments={garments} zones={zones} layout={layout} />
 
           <p className="text-muted-foreground text-xs">
             {garments.length === 0
@@ -217,11 +249,22 @@ export function OutfitEditor({ items, zones, outfit }: OutfitEditorProps) {
           </div>
 
           {error && <p className="text-destructive text-sm">{error}</p>}
+          {exportError && <p className="text-destructive text-sm">{exportError}</p>}
 
           <div className="flex flex-wrap items-center gap-2">
             <Button onClick={() => void save()} disabled={!canSave}>
               {saving ? 'Saving…' : outfit ? 'Save changes' : 'Save outfit'}
             </Button>
+
+            {garments.length > 0 && (
+              <Button
+                variant="outline"
+                onClick={() => void download()}
+                disabled={exporting || saving}
+              >
+                {exporting ? 'Rendering…' : 'Download PNG'}
+              </Button>
+            )}
 
             {selectedIds.length > 0 && (
               <Button variant="outline" onClick={() => setSelectedIds([])} disabled={saving}>
