@@ -236,6 +236,20 @@ model Outfit {
   name      String
   occasions Occasion[]
 
+  /// Board positions: `{ version, placements: [{ itemId, x, y, width, height }] }`
+  /// in a unit coordinate space, so the board renders identically at any size.
+  ///
+  /// Json rather than columns because it is a presentation detail of one screen
+  /// whose shape changes whenever the board gains a zone — relationally that is
+  /// a migration each time. Nothing queries inside it, which is what makes Json
+  /// acceptable here rather than merely convenient.
+  ///
+  /// The service validates the shape on the way in, so "unstructured column"
+  /// does not mean "unvalidated input".
+  ///
+  /// Nullable: an outfit saved without positions simply gets the auto-layout.
+  layout Json?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
