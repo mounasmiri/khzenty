@@ -13,6 +13,13 @@ interface GarmentImageProps {
   /** Overlays such as a status badge, positioned against this container. */
   children?: ReactNode;
   lazy?: boolean;
+  /**
+   * Paint the neutral surface behind the garment. True everywhere a garment is
+   * its own tile; false on the outfit board, where the surface belongs to the
+   * board as one continuous background and a rectangle per garment would show
+   * every box's edge.
+   */
+  surface?: boolean;
 }
 
 /**
@@ -39,10 +46,11 @@ export function GarmentImage({
   imageClassName = '',
   children,
   lazy = false,
+  surface = true,
 }: GarmentImageProps) {
   return (
     <div
-      className={`bg-garment-surface relative flex items-center justify-center overflow-hidden ${className}`}
+      className={`relative flex items-center justify-center overflow-hidden ${surface ? 'bg-garment-surface' : ''} ${className}`}
     >
       {src ? (
         <img

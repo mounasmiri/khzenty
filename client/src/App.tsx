@@ -10,6 +10,7 @@ import { ItemNewPage } from '@/pages/item-new-page';
 import { BulkAddPage } from '@/pages/bulk-add-page';
 import { LoginPage } from '@/pages/login-page';
 import { LaundryPage } from '@/pages/laundry-page';
+import { OutfitNewPage } from '@/pages/outfit-new-page';
 import { QuickAddPage } from '@/pages/quick-add-page';
 import { QuickSortPage } from '@/pages/quick-sort-page';
 import { RegisterPage } from '@/pages/register-page';
@@ -59,6 +60,7 @@ function App() {
           <Route path="/items/bulk-add" element={<BulkAddPage />} />
           <Route path="/items/sort" element={<QuickSortPage />} />
           <Route path="/laundry" element={<LaundryPage />} />
+          <Route path="/outfits/new" element={<OutfitNewPage />} />
           <Route path="/items/:id" element={<ItemDetailPage />} />
           <Route path="/items/:id/edit" element={<ItemEditPage />} />
         </Route>
