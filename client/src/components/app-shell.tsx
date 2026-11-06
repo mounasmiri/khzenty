@@ -20,6 +20,9 @@ export function AppShell() {
 
           <div className="flex items-center gap-3">
             <Button asChild variant="ghost" size="sm">
+              <Link to="/outfits/new">Build</Link>
+            </Button>
+            <Button asChild variant="ghost" size="sm">
               <Link to="/laundry">Laundry</Link>
             </Button>
             <span className="text-muted-foreground hidden text-sm sm:inline">
