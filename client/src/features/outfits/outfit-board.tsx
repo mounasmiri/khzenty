@@ -2,7 +2,8 @@ import { useMemo } from 'react';
 
 import { GarmentImage } from '@/features/clothing/garment-image';
 import { labelFor } from '@/features/clothing/labels';
-import { type BoardItem, type BoardLayout, computeBoardLayout } from './board-layout';
+import type { BoardLayout } from './board-layout';
+import { layoutForGarments, layoutMatchesGarments } from './garment-layout';
 import type { BoardZoneMap, OutfitGarment } from './types';
 
 /**
@@ -61,26 +62,14 @@ export function OutfitBoard({
   );
 
   const placements = useMemo(() => {
-    const saved = layout?.placements.filter((placement) => byId.has(placement.itemId));
-
-    // A saved layout is used only if it still covers exactly the garments in
-    // the outfit. Anything else — a garment added since, or one removed — and
-    // the auto-layout is the honest answer, rather than a board with a hole in
-    // it or an item stacked at the origin.
-    if (saved && saved.length === byId.size && layout) {
-      return saved;
+    // A saved layout is used only while it still describes exactly these
+    // garments; otherwise the auto-layout is the honest answer.
+    if (layout && layoutMatchesGarments(layout, garments)) {
+      return layout.placements;
     }
 
-    const items: BoardItem[] = garments.flatMap((garment) => {
-      const zone = zones[garment.type];
-
-      // No zone means the server knows a type this client does not. Leaving it
-      // out beats rendering it at a default position on top of something else.
-      return zone ? [{ id: garment.id, zone }] : [];
-    });
-
-    return computeBoardLayout(items).placements;
-  }, [byId, garments, layout, zones]);
+    return layoutForGarments(garments, zones).placements;
+  }, [garments, layout, zones]);
 
   return (
     <div

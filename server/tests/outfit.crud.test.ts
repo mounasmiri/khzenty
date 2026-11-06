@@ -182,6 +182,21 @@ describe('outfit CRUD', () => {
       expect(updated.body.outfit.layout).toBeNull();
     });
 
+    it('accepts a layout covering only some of the garments', async () => {
+      // The client leaves a garment out of the layout when its type has no
+      // board zone — a type the server knows and that client build does not.
+      // The outfit still contains it, so a subset has to be allowed.
+      const layout = { version: LAYOUT_VERSION, placements: [placement(top)] };
+
+      const res = await agent
+        .post('/api/outfits')
+        .send({ name: 'Subset', itemIds: [top, bottom, shoes], layout })
+        .expect(201);
+
+      expect(res.body.outfit.items).toHaveLength(3);
+      expect(res.body.outfit.layout.placements).toHaveLength(1);
+    });
+
     it('rejects a layout positioning a garment not in the outfit', async () => {
       // Otherwise the layout column is a second, unchecked place to store ids.
       await agent
