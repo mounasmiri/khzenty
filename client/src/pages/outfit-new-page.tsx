@@ -33,6 +33,10 @@ export function OutfitNewPage() {
       </div>
 
       <OutfitEditor items={items} zones={zones} />
+
+      <Button asChild variant="ghost" className="self-start">
+        <Link to="/">← Back to wardrobe</Link>
+      </Button>
     </div>
   );
 }

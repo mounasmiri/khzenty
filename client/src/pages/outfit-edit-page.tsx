@@ -47,6 +47,10 @@ export function OutfitEditPage() {
       {/* Keyed on the outfit id so navigating between two outfits rebuilds the
           editor's initial state instead of keeping the previous one's. */}
       <OutfitEditor key={outfit.id} items={items} zones={zones} outfit={outfit} />
+
+      <Button asChild variant="ghost" className="self-start">
+        <Link to="/">← Back to wardrobe</Link>
+      </Button>
     </div>
   );
 }
