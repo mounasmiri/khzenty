@@ -67,6 +67,8 @@ export function OutfitEditor({ items, zones, outfit }: OutfitEditorProps) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [wearLogId, setWearLogId] = useState<string | null>(null);
+  const [wearBusy, setWearBusy] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
 
@@ -157,6 +159,36 @@ export function OutfitEditor({ items, zones, outfit }: OutfitEditorProps) {
     } catch (caught) {
       setError(caught instanceof ApiError ? caught.message : 'The outfit could not be saved.');
       setSaving(false);
+    }
+  };
+
+  const markWorn = async () => {
+    if (!outfit) return;
+
+    setWearBusy(true);
+    setError(null);
+
+    try {
+      setWearLogId(await outfitsApi.wear(outfit.id));
+    } catch (caught) {
+      setError(caught instanceof ApiError ? caught.message : 'Could not mark the outfit as worn.');
+    } finally {
+      setWearBusy(false);
+    }
+  };
+
+  const undoWorn = async () => {
+    if (!wearLogId) return;
+
+    setWearBusy(true);
+
+    try {
+      await outfitsApi.undoWear(wearLogId);
+      setWearLogId(null);
+    } catch (caught) {
+      setError(caught instanceof ApiError ? caught.message : 'Could not undo that.');
+    } finally {
+      setWearBusy(false);
     }
   };
 
@@ -262,6 +294,16 @@ export function OutfitEditor({ items, zones, outfit }: OutfitEditorProps) {
               {saving ? 'Saving…' : outfit ? 'Save changes' : 'Save outfit'}
             </Button>
 
+            {outfit && (
+              <Button
+                variant="outline"
+                onClick={() => void markWorn()}
+                disabled={wearBusy || saving || wearLogId !== null}
+              >
+                Worn today
+              </Button>
+            )}
+
             {garments.length > 0 && (
               <Button
                 variant="outline"
@@ -318,6 +360,26 @@ export function OutfitEditor({ items, zones, outfit }: OutfitEditorProps) {
 
         <GarmentPicker items={selectable} selectedIds={selectedIds} onToggle={toggleGarment} />
       </div>
+
+      {wearLogId && (
+        <div
+          role="status"
+          className="bg-foreground text-background fixed inset-x-4 bottom-4 z-50 mx-auto flex max-w-sm items-center justify-between gap-3 rounded-md px-4 py-3 text-sm shadow-lg"
+        >
+          <span>Marked as worn. Clean pieces moved to the laundry.</span>
+          <Button size="sm" variant="secondary" onClick={() => void undoWorn()} disabled={wearBusy}>
+            Undo
+          </Button>
+          <button
+            type="button"
+            aria-label="Dismiss"
+            className="opacity-70 hover:opacity-100"
+            onClick={() => setWearLogId(null)}
+          >
+            ×
+          </button>
+        </div>
+      )}
     </div>
   );
 }

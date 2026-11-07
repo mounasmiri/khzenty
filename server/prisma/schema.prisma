@@ -171,6 +171,7 @@ model User {
 
   clothingItems ClothingItem[]
   outfits       Outfit[]
+  wearLogs      WearLog[]
 }
 
 /// A single garment the user owns.
@@ -253,7 +254,8 @@ model Outfit {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  items OutfitItem[]
+  items    OutfitItem[]
+  wearLogs WearLog[]
 
   @@index([userId])
 }
@@ -280,4 +282,27 @@ model OutfitItem {
   @@unique([outfitId, clothingItemId])
   /// Answers "which outfits use this garment?" before deleting it.
   @@index([clothingItemId])
+}
+
+/// One "worn today" event for an outfit.
+///
+/// `changedItemIds` records which garments *this* entry moved from CLEAN to
+/// IN_LAUNDRY, so undo restores exactly those and nothing else — a piece that
+/// was already in the wash when the outfit was worn is not this entry's to
+/// restore. A plain array rather than a join table: it is a snapshot of one
+/// moment, never queried by item, and must survive the item being deleted.
+model WearLog {
+  id String @id @default(cuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  outfitId String
+  outfit   Outfit @relation(fields: [outfitId], references: [id], onDelete: Cascade)
+
+  wornAt         DateTime @default(now())
+  changedItemIds String[]
+
+  @@index([userId])
+  @@index([outfitId])
 }

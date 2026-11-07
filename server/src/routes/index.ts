@@ -6,6 +6,7 @@ import { healthRouter } from './health.routes.js';
 import { outfitRouter } from './outfit.routes.js';
 import { taxonomyRouter } from './taxonomy.routes.js';
 import { uploadRouter } from './upload.routes.js';
+import { wearLogRouter } from './wear-log.routes.js';
 
 /**
  * Aggregates every feature router. Mounted once, under `/api`, by `app.ts`.
@@ -18,3 +19,4 @@ apiRouter.use('/items', clothingItemRouter);
 apiRouter.use('/outfits', outfitRouter);
 apiRouter.use('/taxonomy', taxonomyRouter);
 apiRouter.use('/uploads', uploadRouter);
+apiRouter.use('/wear-log', wearLogRouter);
