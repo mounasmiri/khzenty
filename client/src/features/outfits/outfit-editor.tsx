@@ -167,9 +167,15 @@ export function OutfitEditor({ items, zones, outfit }: OutfitEditorProps) {
     try {
       // The same layout the board is displaying, so the PNG is what was on
       // screen rather than a second computation of it.
-      const blob = await exportBoardPng({ garments, zones, layout });
+      const { blob, failedLabels } = await exportBoardPng({ garments, zones, layout });
 
       downloadBlob(blob, exportFileName(trimmedName || outfit?.name || 'outfit'));
+
+      if (failedLabels.length > 0) {
+        setExportError(
+          `Exported, but ${failedLabels.length === 1 ? 'one photo' : `${String(failedLabels.length)} photos`} could not be loaded and ${failedLabels.length === 1 ? 'is' : 'are'} shown as a card: ${failedLabels.join(', ')}.`,
+        );
+      }
     } catch (caught) {
       setExportError(
         caught instanceof BoardExportError ? caught.message : 'The board could not be exported.',
