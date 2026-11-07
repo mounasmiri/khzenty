@@ -140,13 +140,6 @@ photo-only garment simply omits it and the UI shows an Unsorted badge. This
 replaced an earlier sentinel string that wrote a non-colour into the colour
 column.
 
-**Blocked on a Cloudinary key permission.** The signature is correct — proved by
-Cloudinary echoing its own string-to-sign on a deliberately tampered attempt,
-which matched ours exactly. A *correct* signature returns
-`403 missing permissions (actions=["create"])`, so the API key in use can read
-(`ping` succeeds) but cannot upload. Needs a key with the create/upload action
-enabled; no code change.
-
 - [x] Background removal — optional and in-browser via
       `@imgly/background-removal` (`isnet_quint8`), with a before/after
       preview, trim-to-garment, centring on a square and a WebP export with
@@ -169,12 +162,15 @@ lost.
 
 ---
 
-## Phase 4 — Outfit builder
+## Phase 4 — Outfit builder ✅
 
-- [ ] Create an outfit from selected items
-- [ ] Outfit list and detail views
-- [ ] Edit and delete
-- [ ] Drag-and-drop or selection UI
+- [x] Create an outfit from selected items (clean garments only)
+- [x] Outfit list, open and edit
+- [x] Delete
+- [x] Selection UI with an auto-layout board (`computeBoardLayout`)
+- [x] Export the board as a PNG
+- [x] `WATCH` type and a board-zone map for every garment type
+- [ ] Drag-and-drop repositioning (layouts are auto-computed and stored)
 
 ---
 
