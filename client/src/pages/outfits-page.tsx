@@ -1,11 +1,12 @@
-import { useState } from 'react';
-import { Link } from 'react-router';
+import { useRef, useState } from 'react';
+import { Link, useNavigate } from 'react-router';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { labelFor } from '@/features/clothing/labels';
 import { OutfitBoard } from '@/features/outfits/outfit-board';
 import { outfitsApi } from '@/features/outfits/api';
+import { pickOutfitForToday } from '@/features/outfits/pick-outfit';
 import { useBoardZones } from '@/features/outfits/use-board-zones';
 import { useOutfits } from '@/features/outfits/use-outfits';
 import { ApiError } from '@/lib/api';
@@ -13,6 +14,22 @@ import { ApiError } from '@/lib/api';
 export function OutfitsPage() {
   const { outfits, error, removeLocally } = useOutfits();
   const zones = useBoardZones();
+  const navigate = useNavigate();
+
+  const lastPickRef = useRef<string | null>(null);
+  const [nothingReady, setNothingReady] = useState(false);
+
+  const suggest = () => {
+    const picked = pickOutfitForToday(outfits ?? [], Math.random, lastPickRef.current);
+
+    if (!picked) {
+      setNothingReady(true);
+      return;
+    }
+
+    lastPickRef.current = picked.id;
+    void navigate(`/outfits/${picked.id}/edit`);
+  };
 
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -55,10 +72,21 @@ export function OutfitsPage() {
           </p>
         </div>
 
-        <Button asChild size="sm">
-          <Link to="/outfits/new">Build one</Link>
-        </Button>
+        <div className="flex flex-wrap justify-end gap-2">
+          <Button variant="outline" size="sm" onClick={suggest}>
+            What should I wear today?
+          </Button>
+          <Button asChild size="sm">
+            <Link to="/outfits/new">Build one</Link>
+          </Button>
+        </div>
       </div>
+
+      {nothingReady && (
+        <p role="status" className="text-muted-foreground text-sm">
+          No outfit is ready. Everything is in the laundry or no outfits are saved yet.
+        </p>
+      )}
 
       {deleteError && <p className="text-destructive text-sm">{deleteError}</p>}
 
