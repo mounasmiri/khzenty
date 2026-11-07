@@ -45,6 +45,22 @@ export async function wearOutfit(userId: string, outfitId: string) {
   });
 }
 
+export const RECENT_WEAR_LIMIT = 20;
+
+/**
+ * The caller's most recent wearings, newest first. `WearLog.outfit` cascades on
+ * delete, so an entry can never point at a missing outfit and needs no fallback
+ * name.
+ */
+export function listRecentWear(userId: string) {
+  return prisma.wearLog.findMany({
+    where: { userId },
+    select: { id: true, wornAt: true, outfit: { select: { id: true, name: true } } },
+    orderBy: [{ wornAt: 'desc' }, { id: 'desc' }],
+    take: RECENT_WEAR_LIMIT,
+  });
+}
+
 /**
  * Undoes one wearing: deletes the entry and restores only the pieces it moved.
  * Scoped by `userId`; a foreign or unknown id is a 404 and changes nothing.

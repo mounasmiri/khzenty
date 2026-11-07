@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 
 import { Badge } from '@/components/ui/badge';
@@ -7,14 +7,38 @@ import { labelFor } from '@/features/clothing/labels';
 import { OutfitBoard } from '@/features/outfits/outfit-board';
 import { outfitsApi } from '@/features/outfits/api';
 import { pickOutfitForToday } from '@/features/outfits/pick-outfit';
+import { wearDateLabel } from '@/features/outfits/wear-date';
 import { useBoardZones } from '@/features/outfits/use-board-zones';
 import { useOutfits } from '@/features/outfits/use-outfits';
 import { ApiError } from '@/lib/api';
+
+type WearEntry = Awaited<ReturnType<typeof outfitsApi.recentWear>>[number];
 
 export function OutfitsPage() {
   const { outfits, error, removeLocally } = useOutfits();
   const zones = useBoardZones();
   const navigate = useNavigate();
+
+  // Fetched on every visit, so a wearing or an undo made on the outfit page
+  // shows up as soon as the user comes back here.
+  const [recent, setRecent] = useState<WearEntry[] | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    outfitsApi
+      .recentWear()
+      .then((entries) => {
+        if (!cancelled) setRecent(entries);
+      })
+      .catch(() => {
+        if (!cancelled) setRecent([]);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const lastPickRef = useRef<string | null>(null);
   const [nothingReady, setNothingReady] = useState(false);
@@ -169,6 +193,26 @@ export function OutfitsPage() {
           ))}
         </ul>
       )}
+
+      <section className="space-y-2">
+        <h2 className="text-lg font-semibold tracking-tight">Recently worn</h2>
+        {recent === null ? null : recent.length === 0 ? (
+          <p className="text-muted-foreground text-sm">Nothing worn yet</p>
+        ) : (
+          <ul className="divide-y rounded-lg border">
+            {recent.map((entry) => (
+              <li key={entry.id} className="flex items-center justify-between gap-3 px-3 py-2">
+                <Link to={`/outfits/${entry.outfit.id}/edit`} className="truncate hover:underline">
+                  {entry.outfit.name}
+                </Link>
+                <span className="text-muted-foreground shrink-0 text-xs">
+                  {wearDateLabel(entry.wornAt)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
       <Button asChild variant="ghost" className="self-start">
         <Link to="/">← Back to wardrobe</Link>

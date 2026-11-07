@@ -1,7 +1,7 @@
 import type { RequestHandler } from 'express';
 
 import { HttpError } from '../lib/http-error.js';
-import { undoWear, wearOutfit } from '../services/wear-log.service.js';
+import { listRecentWear, undoWear, wearOutfit } from '../services/wear-log.service.js';
 
 function userIdOf(req: Parameters<RequestHandler>[0]): string {
   if (!req.user) {
@@ -20,6 +20,10 @@ function idOf(req: Parameters<RequestHandler>[0]): string {
 
   return id;
 }
+
+export const getWearLog: RequestHandler = async (req, res) => {
+  res.status(200).json({ entries: await listRecentWear(userIdOf(req)) });
+};
 
 export const postWear: RequestHandler = async (req, res) => {
   res.status(201).json({ wearLog: await wearOutfit(userIdOf(req), idOf(req)) });

@@ -55,6 +55,30 @@ describe('wear log', () => {
     expect(moved.laundryAt).not.toBeNull();
   });
 
+  it('lists only the callers entries, newest first, capped at 20', async () => {
+const a = await createUser('lister@khzenty.test');
+    const b = await createUser('other@khzenty.test');
+    const mine = await signIn('lister@khzenty.test');
+    const o1 = await prisma.outfit.create({ data: { userId: a.id, name: 'First' } });
+    const o2 = await prisma.outfit.create({ data: { userId: a.id, name: 'Second' } });
+    const theirs = await prisma.outfit.create({ data: { userId: b.id, name: 'Theirs' } });
+
+    await prisma.wearLog.create({
+      data: { userId: a.id, outfitId: o1.id, wornAt: new Date('2026-01-01') },
+    });
+    await prisma.wearLog.create({
+      data: { userId: a.id, outfitId: o2.id, wornAt: new Date('2026-01-02') },
+    });
+    await prisma.wearLog.create({ data: { userId: b.id, outfitId: theirs.id } });
+
+    const res = await mine.get('/api/wear-log').expect(200);
+
+    expect(res.body.entries.map((e: { outfit: { name: string } }) => e.outfit.name)).toEqual([
+      'Second',
+      'First',
+    ]);
+  });
+
   it('undo restores only what the entry changed, and only for its owner', async () => {
     await setup();
     await owner.patch(`/api/items/${shoes}/laundry`).send({ status: 'IN_LAUNDRY' }).expect(200);
