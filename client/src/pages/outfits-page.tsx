@@ -169,6 +169,10 @@ export function OutfitsPage() {
           ))}
         </ul>
       )}
+
+      <Button asChild variant="ghost" className="self-start">
+        <Link to="/">← Back to wardrobe</Link>
+      </Button>
     </div>
   );
 }
