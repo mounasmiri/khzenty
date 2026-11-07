@@ -13,6 +13,14 @@ export const outfitsApi = {
   update: (id: string, input: Partial<OutfitInput>) =>
     api.patch<{ outfit: Outfit }>(`/outfits/${encodeURIComponent(id)}`, input).then((r) => r.outfit),
 
+  /** Marks the outfit worn; clean pieces go to the laundry. Resolves with the log id. */
+  wear: (id: string) =>
+    api
+      .post<{ wearLog: { id: string } }>(`/outfits/${encodeURIComponent(id)}/wear`)
+      .then((r) => r.wearLog.id),
+
+  undoWear: (logId: string) => api.post<void>(`/wear-log/${encodeURIComponent(logId)}/undo`),
+
   remove: (id: string) => api.delete<void>(`/outfits/${encodeURIComponent(id)}`),
 
   /**
