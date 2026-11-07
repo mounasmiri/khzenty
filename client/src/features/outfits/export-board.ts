@@ -71,18 +71,35 @@ function loadImage(src: string): Promise<HTMLImageElement> {
   });
 }
 
-/** Centred text, used where a garment has no photo. Mirrors the DOM placeholder. */
+/**
+ * A muted card with the garment's label, drawn where a photo is missing or
+ * could not be loaded, so the export never has a silent hole in it.
+ */
 function drawPlaceholder(
   context: CanvasRenderingContext2D,
   text: string,
   box: { x: number; y: number; width: number; height: number },
 ): void {
+  const inset = Math.min(box.width, box.height) * 0.06;
+  const x = box.x + inset;
+  const y = box.y + inset;
+  const width = box.width - inset * 2;
+  const height = box.height - inset * 2;
+
   context.save();
-  context.fillStyle = 'rgba(115, 115, 115, 0.9)';
+  context.fillStyle = 'rgba(0, 0, 0, 0.06)';
+  context.strokeStyle = 'rgba(0, 0, 0, 0.12)';
+  context.lineWidth = 2;
+  context.beginPath();
+  context.roundRect(x, y, width, height, Math.min(width, height) * 0.08);
+  context.fill();
+  context.stroke();
+
+  context.fillStyle = 'rgba(90, 90, 90, 0.95)';
   context.textAlign = 'center';
   context.textBaseline = 'middle';
-  context.font = `${String(Math.max(12, Math.round(box.width * 0.1)))}px system-ui, sans-serif`;
-  context.fillText(text, box.x + box.width / 2, box.y + box.height / 2, box.width * 0.9);
+  context.font = `${String(Math.max(12, Math.round(width * 0.1)))}px system-ui, sans-serif`;
+  context.fillText(text, x + width / 2, y + height / 2, width * 0.85);
   context.restore();
 }
 
@@ -114,7 +131,13 @@ export interface ExportBoardOptions {
  * Garments load in parallel but draw in placement order, so the result does
  * not depend on which photo arrived first.
  */
-export async function exportBoardPng(options: ExportBoardOptions): Promise<Blob> {
+export interface ExportBoardResult {
+  blob: Blob;
+  /** Labels of garments whose photo could not be loaded and were drawn as cards. */
+  failedLabels: string[];
+}
+
+export async function exportBoardPng(options: ExportBoardOptions): Promise<ExportBoardResult> {
   const { garments, zones, layout } = options;
 
   const placements =
@@ -154,6 +177,7 @@ export async function exportBoardPng(options: ExportBoardOptions): Promise<Blob>
 
   // Loaded together, drawn in order below.
   const images = new Map<string, HTMLImageElement>();
+  const failedLabels: string[] = [];
 
   await Promise.all(
     placements.map(async (placement) => {
@@ -161,7 +185,13 @@ export async function exportBoardPng(options: ExportBoardOptions): Promise<Blob>
 
       if (!garment?.imageUrl) return;
 
-      images.set(placement.itemId, await loadImage(garment.imageUrl));
+      try {
+        images.set(placement.itemId, await loadImage(garment.imageUrl));
+      } catch {
+        // One unreadable photo (CORS or network) must not sink the export: it
+        // is drawn as a labelled card instead and reported to the caller.
+        failedLabels.push(garment.name ?? labelFor(garment.type));
+      }
     }),
   );
 
@@ -174,7 +204,7 @@ export async function exportBoardPng(options: ExportBoardOptions): Promise<Blob>
     const image = images.get(placement.itemId);
 
     if (!image) {
-      drawPlaceholder(context, labelFor(garment.type), box);
+      drawPlaceholder(context, garment.name ?? labelFor(garment.type), box);
       continue;
     }
 
@@ -204,7 +234,7 @@ export async function exportBoardPng(options: ExportBoardOptions): Promise<Blob>
     throw new BoardExportError('The board could not be turned into an image.');
   }
 
-  return blob;
+  return { blob, failedLabels };
 }
 
 /**
