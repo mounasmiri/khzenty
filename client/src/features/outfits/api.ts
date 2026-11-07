@@ -19,6 +19,13 @@ export const outfitsApi = {
       .post<{ wearLog: { id: string } }>(`/outfits/${encodeURIComponent(id)}/wear`)
       .then((r) => r.wearLog.id),
 
+  recentWear: () =>
+    api
+      .get<{ entries: { id: string; wornAt: string; outfit: { id: string; name: string } }[] }>(
+        '/wear-log',
+      )
+      .then((r) => r.entries),
+
   undoWear: (logId: string) => api.post<void>(`/wear-log/${encodeURIComponent(logId)}/undo`),
 
   remove: (id: string) => api.delete<void>(`/outfits/${encodeURIComponent(id)}`),
