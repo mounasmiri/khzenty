@@ -17,19 +17,15 @@
 | 3 — Clothing CRUD | Item CRUD with server-derived `category`, wardrobe grid, item detail, `userId` scoping throughout |
 | 3b — Images | Signed direct Cloudinary upload with server-side confirmation, remove photo, delete-on-remove, mobile quick/bulk capture, quick sort, optional in-browser background removal |
 | Laundry | Manual `CLEAN`/`IN_LAUNDRY`, toggle, basket with bulk wash, wardrobe filter |
-| Cross-cutting | Vitest + Supertest on a separate test database (60 server tests), 38 client tests on pure logic, GitHub Actions CI |
+| 4 — Outfit builder | `/api/outfits` CRUD scoped by `userId` (a client cannot attach another user's garment), auto-layout board, save with name and occasions, list/edit/delete, PNG export |
+| Cross-cutting | Vitest + Supertest on a separate test database (114 server tests), 141 client tests on pure logic, GitHub Actions CI |
 
 ## In progress
 
 Nothing is mid-change. The tree is clean and every suite passes.
 
-Two items are **finished in code but not usable end to end**, which is a
-different thing from in progress:
+One item is **finished in code but not verified**:
 
-- **Image upload** — the signature is correct, but the configured Cloudinary API
-  key lacks the `create` action, so a correct signature returns
-  `403 missing permissions (actions=["create"])`. Needs a key with upload
-  permission; no code change.
 - **Background removal** — wired and tested, but the model has never actually
   run in a real browser, so cutout quality is unverified.
 
@@ -37,15 +33,11 @@ different thing from in progress:
 
 In the order the roadmap proposes:
 
-1. **Phase 4 — Outfit builder.** The largest gap between the schema and the
-   product: `Outfit` and `OutfitItem` exist and the item response already
-   carries an outfit count, but there are no outfit endpoints and no UI. This is
-   also the feature the app is named for.
-2. **Phase 5 — Search and filters.** Filter by category, colour and season;
+1. **Phase 5 — Search and filters.** Filter by category, colour and season;
    text search; empty states. The laundry filter is the only one that exists,
    and it filters client-side — this phase is where that moves server-side,
    alongside pagination.
-3. **Phase 6 — Occasion collections.** Grouping outfits by occasion; depends on
+2. **Phase 6 — Occasion collections.** Grouping outfits by occasion; depends on
    Phase 4.
 
 Deliberately not next: Phase 8 (AI) needs real usage data first, and Phase 7

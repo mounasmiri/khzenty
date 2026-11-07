@@ -69,8 +69,7 @@ Deliberately deferred so scope stays honest:
 ## Current state
 
 A working single-user wardrobe: sign in, catalogue garments with photos, mark
-things as in the wash. Outfits — the feature the name promises — are **not**
-built yet.
+things as in the wash, and compose clean garments into outfits on a board.
 
 ### Built
 
@@ -92,24 +91,24 @@ built yet.
   Falls back to the original photo on any failure.
 - **Laundry.** Manual `CLEAN`/`IN_LAUNDRY` status, a toggle on the card and
   detail page, a basket page with bulk mark-as-washed, and a wardrobe filter.
-- **Tests and CI.** 60 server tests (Vitest + Supertest, separate database) and
-  38 client tests (pure logic only). GitHub Actions runs install, typecheck,
+- **Outfits.** `/api/outfits` CRUD, every query scoped by `userId`; an outfit can
+  only contain the caller's own garments (a foreign id is a 404 and nothing is
+  saved). `itemIds` replaces the whole set; `layout` is a validated nullable
+  `Json` column. The client board lays garments out by *board zone*
+  (`BOARD_ZONE_BY_TYPE`, served by `/api/taxonomy`) via the pure
+  `computeBoardLayout`, with a picker (clean items only), save, list, edit,
+  delete and PNG export.
+- **Tests and CI.** 114 server tests (Vitest + Supertest, separate database) and
+  141 client tests (pure logic only). GitHub Actions runs install, typecheck,
   test and build against a Postgres service container.
 
 ### Not built
 
-- **Outfits.** `Outfit` and `OutfitItem` exist in the schema and the item
-  response carries an outfit count, but there are **no outfit endpoints and no
-  UI**. The mounted routers are `/health`, `/auth`, `/items`, `/taxonomy` and
-  `/uploads`.
 - Search and filtering beyond the laundry filter; occasion collections; packing
   assistant; anything AI.
 
 ### Known gaps worth knowing before changing things
 
-- **Uploads are blocked in practice.** The signature is correct, but the
-  configured Cloudinary key lacks the `create` action, so a correct signature
-  returns `403 missing permissions`. No code change needed.
 - No pagination: `listItems` returns the whole wardrobe.
 - No refresh tokens, and nothing revokes a session before its 7-day expiry.
 - Client tests cover pure logic only — no component or end-to-end tests.
