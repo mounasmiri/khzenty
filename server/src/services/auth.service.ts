@@ -13,6 +13,7 @@ const PUBLIC_USER_SELECT = {
   id: true,
   email: true,
   name: true,
+  isDemo: true,
   createdAt: true,
 } as const;
 

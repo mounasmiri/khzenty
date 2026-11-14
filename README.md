@@ -1,5 +1,7 @@
 # 👗 Khzenty
 
+[![CI](https://github.com/mounasmiri/khzenty/actions/workflows/ci.yml/badge.svg)](https://github.com/mounasmiri/khzenty/actions/workflows/ci.yml)
+
 > Organize less. Decide faster. Dress better.
 
 Khzenty is a modern wardrobe assistant that helps users organize their clothes, create outfits, and simplify daily outfit decisions.
@@ -115,6 +117,8 @@ Then edit `server/.env`:
   node -e "console.log(require('node:crypto').randomBytes(48).toString('base64url'))"
   ```
 
+**Demo sandbox (optional).** Set `DEMO_LOGIN_ENABLED=true` in `server/.env` and run `npm run db:seed` to show a "Try the demo" button on the login page. Each click gives the visitor a **private, temporary copy** of the seeded `demo@khzenty.test` account (garments, outfits, trips, wear log) and signs them into it, so one visitor's changes are never seen by another. Copies share the template's photos by reference, cannot upload new ones (`403`), and are deleted after 24 hours; at most `DEMO_MAX_USERS` (default 200) exist at once, after which sign-in answers `503`. The template itself is never signed into; `npm run db:seed` is how you refresh it. It defaults to `false`, in which case `POST /api/auth/demo` returns `404`. Enable it only on a demo deployment.
+
 The server validates its environment at boot and exits immediately with a specific message if anything is missing. There is deliberately no fallback `JWT_SECRET`.
 
 **Cloudinary (optional).** Create a free account and an API key that is allowed to upload, then add the three `CLOUDINARY_*` values to `server/.env`. Without them the server still boots and the two upload endpoints return `503`. Never commit `.env`.
@@ -164,6 +168,8 @@ That request goes through the Vite dev proxy to the API, so a JSON response conf
 | POST | `/api/auth/register` | — | Create an account, returns `201` and signs in |
 | POST | `/api/auth/login` | — | Sign in, sets the session cookie |
 | POST | `/api/auth/logout` | — | Clears the cookie, `204` |
+| POST | `/api/auth/demo` | — | Create a private demo copy of the seeded account and sign in as it; no credentials sent. `404` unless `DEMO_LOGIN_ENABLED=true`, `503` when the cap is reached; rate limited with login |
+| GET | `/api/auth/demo` | — | `200 { enabled: true }` when demo login is on, `404` when off — lets the login page decide whether to show "Try the demo" |
 | GET | `/api/auth/me` | cookie | The signed-in user |
 | GET | `/api/items` | cookie | The user's garments, favourites first |
 | POST | `/api/items` | cookie | Create a garment |
@@ -222,6 +228,106 @@ The session is an httpOnly `SameSite=Lax` cookie, so JavaScript cannot read it a
 
 Login returns the same `401 Invalid email or password` whether the email is unknown or the password is wrong, and verifies against a dummy hash when no user matches, so neither the message nor the response time reveals which emails are registered.
 
+## 🌍 Deployment
+
+A free setup that keeps the session cookie same-origin:
+
+```
+Browser ──► Vercel ──────────────► Render ───────► Neon
+            static client           Express API     Postgres
+            /api/* rewrite  ──►     (free plan)     (pooled URL for the app,
+                                                     direct URL for migrations)
+```
+
+The browser only ever talks to the Vercel origin. Vercel serves the built client and **rewrites** `/api/*` to the Render service (`client/vercel.json`), so the client keeps calling `/api`, the cookie belongs to the Vercel host, and there is no CORS. `render.yaml` describes the API as a Render Blueprint.
+
+### Order of operations
+
+You need the Render URL before Vercel's rewrite works, and the Vercel URL before the API accepts writes, so do it in this order.
+
+1. **Neon.** Create a project (pick the region nearest the Render region you will use). From *Connection details* copy two strings, both with `sslmode=require`:
+   - **Pooled** — the host contains `-pooler`. This becomes `DATABASE_URL`.
+   - **Direct** — the host has no `-pooler`. This becomes `DIRECT_URL`.
+
+   The app works through the pooler (the `pg` driver does not cache prepared statements, which is what PgBouncer's transaction mode needs). `prisma migrate` takes a session-level advisory lock the pooler cannot provide, so migrations use `DIRECT_URL` (see `server/prisma.config.ts`). You may see a `pg` warning about `sslmode=require` being treated as `verify-full`; Neon's certificates are valid, so it is informational.
+2. **Generate a session secret:**
+   ```bash
+   node -e "console.log(require('node:crypto').randomBytes(48).toString('base64url'))"
+   ```
+3. **Render.** *New → Blueprint*, pick this repository, and apply `render.yaml`. Fill in the prompted values (table below). For `CLIENT_ORIGIN` enter your *intended* Vercel URL for now (you can fix it in step 6). Wait for the first deploy; `https://<service>.onrender.com/api/health` should answer `{"status":"ok"}`.
+4. **Point the rewrite at Render.** In `client/vercel.json` replace `REPLACE-WITH-YOUR-RENDER-SERVICE` with your service name, commit and push.
+5. **Vercel.** *Add New → Project*, import the repository, and set **Root Directory** to `client`. The defaults (Vite, `npm run build`, output `dist`) are right. No environment variables are needed: the client calls `/api`.
+6. **Close the loop.** In Render, set `CLIENT_ORIGIN` to the exact Vercel **production** origin (for example `https://khzenty.vercel.app` — `https`, no path) and save; Render redeploys.
+7. **Seed the demo template** (below), then run the first-test checklist.
+
+### Environment variables (Render)
+
+| Variable | Value | Notes |
+|---|---|---|
+| `NODE_VERSION` | `24.16.0` | Set in `render.yaml`. |
+| `NODE_ENV` | `production` | Set in `render.yaml`. Turns on `Secure` cookies and the production boot checks. |
+| `DATABASE_URL` | Neon **pooled** URL | Used by the running server. |
+| `DIRECT_URL` | Neon **direct** URL | Used only by `prisma migrate deploy` at start. |
+| `JWT_SECRET` | generated, ≥ 32 chars | The server refuses placeholders and repetitive values in production. |
+| `CLIENT_ORIGIN` | Vercel production origin | A trailing slash is stripped, but it must otherwise match what the browser sends. Writes from any other origin get `403`. |
+| `TRUST_PROXY` | `2` | Vercel's rewrite plus Render's load balancer. See below. |
+| `DEMO_LOGIN_ENABLED` | `true` | Shows "Try the demo". |
+| `DEMO_MAX_USERS` | `200` | Cap on live demo copies; beyond it sign-in answers `503`. |
+| `CLOUDINARY_*` | your account | Optional. Only needed for signed-in (non-demo) users to upload photos. Delete the three entries from `render.yaml` to run without uploads. |
+
+Migrations run on every start (idempotent, and quick when there is nothing to apply). The build uses `npm ci --include=dev` because Render sets `NODE_ENV=production` during the build and npm would otherwise skip TypeScript and the Prisma CLI.
+
+### Cookies, origin and client IP
+
+- The session cookie is `HttpOnly; Secure; SameSite=Lax` with no `Domain`, so it is scoped to the Vercel host. `Secure` is set from `NODE_ENV`, not from the request, so it does not depend on proxy headers.
+- Browsers send `Origin: https://<your-vercel-host>` on writes and Vercel passes it through; the API compares it with `CLIENT_ORIGIN`. **Only the production domain works.** Vercel preview deployments (`…-git-branch-….vercel.app`) have different origins, so their writes are refused. If you add a custom domain, change `CLIENT_ORIGIN` to it.
+- **`TRUST_PROXY=2`.** The chain is browser → Vercel → Render → app, and the header reaches the app as `X-Forwarded-For: <visitor>, <Vercel>`. With `1` the app would see only Vercel's address, putting every visitor in one rate-limit bucket (10 sign-ins per 15 minutes for *everyone*). `2` reads the visitor. The tests in `server/tests/deployment.test.ts` pin this behaviour. It depends on how Vercel and Render set the header, which cannot be checked without deploying, so confirm once: from your laptop and then from a phone on mobile data, run
+  ```bash
+  curl -s -D - -o /dev/null -X POST https://<vercel-host>/api/auth/login \
+    -H 'content-type: application/json' -H 'origin: https://<vercel-host>' \
+    -d '{"email":"a@b.co","password":"x"}' | grep -i '^ratelimit:'
+  ```
+  Each network should start from its own `remaining=9`. If the second one continues the first one's count, the value is wrong for your chain: try `3` (or `1`) and repeat. Too high a value lets a visitor spoof their address, so raise it only as far as needed.
+
+### Seeding the demo template
+
+Seeding is **manual, never part of a deploy**. The demo sandbox clones one template account (`demo@khzenty.test`); this is how it is created and refreshed.
+
+```bash
+# 1. Once, from your development machine: export the template's photo links.
+cd server
+npm run db:export-demo-photos          # writes prisma/demo-photos.json (git-ignored)
+
+# 2. Seed Neon. Use the DIRECT url. JWT_SECRET only has to be any 32+ characters here.
+DATABASE_URL='postgresql://…direct…?sslmode=require' \
+JWT_SECRET='any-placeholder-of-at-least-32-characters' \
+SEED_ALLOW_PRODUCTION=true \
+SEED_PHOTOS_FILE=default \
+npm run db:seed
+```
+
+On Windows PowerShell set each variable first, e.g. `$env:SEED_ALLOW_PRODUCTION='true'`.
+
+- It refuses to run against anything that is not a local database unless `SEED_ALLOW_PRODUCTION=true` is spelled exactly, whatever `NODE_ENV` says.
+- In that mode it touches **only** the demo template: no dev accounts, other users' rows are never read or deleted, and the template gets an unusable password (the development password is public, and anyone who could sign in could edit what every demo copy is cloned from).
+- It is idempotent. Photo links already on the template are kept; `SEED_PHOTOS_FILE` only fills in missing ones, and the photos themselves stay in Cloudinary untouched.
+- **To refresh the demo** (new sample data, a new seed date), run the same command again. Existing visitor copies are unaffected and expire after 24 hours; new copies get the refreshed template. The template is absent for about a second while it is rebuilt, during which demo sign-in answers `404`, so run it when it is quiet.
+
+### First test
+
+1. Open `https://<render>.onrender.com/api/health` → `{"status":"ok"}`.
+2. Open the Vercel URL → login page shows **Try the demo**.
+3. Click it → the wardrobe loads with photos, and the header shows the demo note.
+4. Reload → still signed in (the cookie works through the rewrite).
+5. Open Trips → Dubai shows a forecast; the Lisbon trip shows "Forecast not available".
+6. Sign out, register a real account, add a garment → writes work; uploads work only if Cloudinary is configured.
+
+### Free-tier behaviour
+
+- **Cold starts.** Render's free web service sleeps after about 15 minutes without traffic, and the first request afterwards takes **30–60 seconds**. Vercel's rewrite may give up before Render has woken, so the very first page load can show an error; reloading a minute later works.
+- **Neon** also suspends when idle. The API waits it out: it retries the connection (never a statement) for several seconds, so the first query after a quiet period is slower rather than failed.
+- **Keeping it awake.** A monitor such as [UptimeRobot](https://uptimerobot.com) pinging `https://<render>.onrender.com/api/health` every 5 minutes avoids Render's cold start. The health check runs `SELECT 1`, so it also keeps Neon awake and uses its free compute allowance around the clock. For a portfolio, consider enabling the monitor only around when you are showing the project.
+
 ## 📜 Scripts
 
 Run from the repo root:
@@ -238,7 +344,8 @@ Run from the repo root:
 | `npm run setup` | Install dependencies in all three packages |
 | `npm run db:generate` | Regenerate the Prisma client |
 | `npm run db:migrate` | Create and apply a migration |
-| `npm run db:seed` | Load development data (idempotent) |
+| `npm run db:seed` | Load development data (idempotent). Refuses non-local databases unless `SEED_ALLOW_PRODUCTION=true` — see Deployment |
+| `npm run db:export-demo-photos` | (in `server/`) Write the demo template's photo links to a git-ignored JSON file |
 | `npm run db:studio` | Open Prisma Studio |
 
 ## 📁 Project Structure

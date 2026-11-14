@@ -17,6 +17,8 @@ interface AuthFormProps {
   /** Register collects an optional display name; login does not. */
   withName?: boolean;
   onSubmit: (values: { email: string; password: string; name?: string }) => Promise<void>;
+  /** When given, a secondary "Try the demo" button is shown under the form. */
+  onDemo?: () => Promise<void>;
 }
 
 /**
@@ -30,6 +32,7 @@ export function AuthForm({
   footer,
   withName = false,
   onSubmit,
+  onDemo,
 }: AuthFormProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -45,6 +48,22 @@ export function AuthForm({
     try {
       await onSubmit({ email, password, ...(withName ? { name } : {}) });
       // No success handling: the auth state change re-renders us away.
+    } catch (caught) {
+      setError(
+        caught instanceof ApiError ? caught.message : 'Something went wrong. Please try again.',
+      );
+      setSubmitting(false);
+    }
+  }
+
+  async function handleDemo() {
+    if (!onDemo) return;
+
+    setError(null);
+    setSubmitting(true);
+
+    try {
+      await onDemo();
     } catch (caught) {
       setError(
         caught instanceof ApiError ? caught.message : 'Something went wrong. Please try again.',
@@ -110,6 +129,19 @@ export function AuthForm({
               {submitting ? 'Please wait…' : submitLabel}
             </Button>
           </form>
+
+          {onDemo ? (
+            // Secondary on purpose: "Sign in" stays the one primary action.
+            <Button
+              type="button"
+              variant="outline"
+              className="mt-3 w-full"
+              disabled={submitting}
+              onClick={() => void handleDemo()}
+            >
+              Try the demo
+            </Button>
+          ) : null}
 
           <p className="text-muted-foreground mt-4 text-center text-sm">
             {footer.prompt}{' '}

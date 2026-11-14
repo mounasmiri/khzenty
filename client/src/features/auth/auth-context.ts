@@ -6,6 +6,8 @@ export interface AuthContextValue {
   user: User | null;
   status: AuthStatus;
   login: (email: string, password: string) => Promise<void>;
+  /** One-click sign-in to the demo account; the server decides which one. */
+  loginAsDemo: () => Promise<void>;
   register: (email: string, password: string, name?: string) => Promise<void>;
   logout: () => Promise<void>;
 }

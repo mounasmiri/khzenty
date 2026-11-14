@@ -4,6 +4,8 @@ export interface User {
   email: string;
   name: string | null;
   createdAt: string;
+  /** True only for the seeded demo account; set by the server. */
+  isDemo?: boolean;
 }
 
 export interface AuthResponse {

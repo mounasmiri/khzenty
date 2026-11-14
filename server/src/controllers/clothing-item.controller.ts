@@ -48,6 +48,6 @@ export const patchItem: RequestHandler = async (req, res) => {
 };
 
 export const deleteItemById: RequestHandler = async (req, res) => {
-  await deleteItem(userIdOf(req), itemIdOf(req));
+  await deleteItem(userIdOf(req), itemIdOf(req), { isDemo: req.user?.isDemo ?? false });
   res.status(204).send();
 };

@@ -8,6 +8,7 @@ import morgan from 'morgan';
 import { env } from './config/env.js';
 import { errorHandler } from './middlewares/error.middleware.js';
 import { notFoundHandler } from './middlewares/not-found.middleware.js';
+import { requireSameOrigin } from './middlewares/origin-check.middleware.js';
 import { apiRouter } from './routes/index.js';
 
 /**
@@ -17,10 +18,19 @@ import { apiRouter } from './routes/index.js';
 export function createApp(): Express {
   const app = express();
 
+  // Helmet already drops it; stated so removing helmet cannot bring it back.
+  app.disable('x-powered-by');
+  // Hops of reverse proxy to trust for the client IP. 0 (the default) trusts
+  // none, so `X-Forwarded-For` cannot be used to dodge the rate limiter.
+  app.set('trust proxy', env.TRUST_PROXY);
+
   app.use(helmet());
   app.use(cors({ origin: env.CLIENT_ORIGIN, credentials: true }));
-  app.use(express.json({ limit: '1mb' }));
-  app.use(express.urlencoded({ extended: true }));
+  // JSON only, and small: the largest legitimate body (a 500-id wash list or
+  // an outfit layout) is a few KiB. No urlencoded parser — nothing here takes
+  // form posts, and leaving it off means a cross-site <form> cannot reach a
+  // handler at all.
+  app.use(express.json({ limit: '100kb' }));
   // Populates `req.cookies`, which `requireAuth` reads the session token from.
   app.use(cookieParser());
 
@@ -28,7 +38,9 @@ export function createApp(): Express {
     app.use(morgan(env.NODE_ENV === 'production' ? 'combined' : 'dev'));
   }
 
-  app.use('/api', apiRouter);
+  // After cookies are parsed and before any route: state-changing requests
+  // that declare a foreign Origin never reach a handler.
+  app.use('/api', requireSameOrigin, apiRouter);
 
   // Order matters: unmatched routes first, then the single error handler.
   app.use(notFoundHandler);

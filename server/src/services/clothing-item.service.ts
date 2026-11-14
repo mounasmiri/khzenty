@@ -98,7 +98,11 @@ export async function updateItem(userId: string, id: string, input: UpdateClothi
   return getItem(userId, id);
 }
 
-export async function deleteItem(userId: string, id: string): Promise<void> {
+export async function deleteItem(
+  userId: string,
+  id: string,
+  actor: { isDemo: boolean },
+): Promise<void> {
   // Read the asset handle before the row goes, since it is the only record of
   // which Cloudinary image belonged to this garment. Still scoped by userId, so
   // this reveals nothing about another user's items.
@@ -117,6 +121,6 @@ export async function deleteItem(userId: string, id: string): Promise<void> {
   // Cloudinary outage must not stop a user removing a garment. Orphaning an
   // image is a far smaller problem than an undeletable item.
   if (item?.imagePublicId) {
-    await destroyAssetQuietly(item.imagePublicId);
+    await destroyAssetQuietly(item.imagePublicId, actor);
   }
 }

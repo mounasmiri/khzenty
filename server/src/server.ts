@@ -1,12 +1,24 @@
 import { createApp } from './app.js';
 import { env } from './config/env.js';
 import { prisma } from './config/prisma.js';
+import { purgeExpiredDemoUsers } from './services/demo-session.service.js';
 
 const app = createApp();
 
 const server = app.listen(env.PORT, () => {
   console.log(`[khzenty] API ready on http://localhost:${env.PORT} (${env.NODE_ENV})`);
 });
+
+// Expired demo copies are also removed on every demo sign-in; doing it at boot
+// too means they do not linger across a quiet period or after the flag is
+// switched off. Failure here must never stop the server starting.
+purgeExpiredDemoUsers()
+  .then((count) => {
+    if (count > 0) console.log(`[khzenty] Removed ${count} expired demo account(s).`);
+  })
+  .catch((error: unknown) => {
+    console.error('[khzenty] Demo cleanup at boot failed:', error);
+  });
 
 // Without this, a failed bind (typically EADDRINUSE) leaves the process alive
 // but not listening, with no indication of why.

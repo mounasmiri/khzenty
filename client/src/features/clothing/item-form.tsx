@@ -13,8 +13,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { useAuth } from '@/features/auth/use-auth';
 import { ApiError } from '@/lib/api';
 import { clothingApi } from './api';
+import { GarmentImage } from './garment-image';
 import { ImagePicker } from './image-picker';
 import { labelFor } from './labels';
 import type { ClothingItem, ClothingItemInput } from './types';
@@ -45,6 +47,7 @@ const PHASE_LABEL: Record<string, string> = {
 
 export function ItemForm({ item, submitLabel, onSubmit, onDone, onCancel }: ItemFormProps) {
   const taxonomy = useTaxonomy();
+  const { user } = useAuth();
 
   const [type, setType] = useState(item?.type ?? '');
   const [color, setColor] = useState(item?.color ?? '');
@@ -208,32 +211,50 @@ export function ItemForm({ item, submitLabel, onSubmit, onDone, onCancel }: Item
         />
       </div>
 
-      <ImagePicker
-        existingUrl={existingImageUrl}
-        file={file}
-        onSelect={setFile}
-        disabled={busy}
-        placeholder={type ? labelFor(type) : 'No photo'}
-        // Only offered while editing: there is nothing stored to remove during
-        // creation.
-        onRemoveExisting={
-          item
-            ? async () => {
-                setError(null);
+      {user?.isDemo ? (
+        // The server refuses uploads from demo copies (403), so say so here
+        // instead of offering a picker that can only fail. Any photo the item
+        // already has is still shown.
+        <div className="flex flex-col gap-2">
+          <Label>Photo</Label>
+          <div className="flex items-start gap-3">
+            <GarmentImage
+              src={existingImageUrl}
+              alt=""
+              placeholder={type ? labelFor(type) : 'No photo'}
+              className="size-24 shrink-0 rounded-md border"
+            />
+            <p className="text-muted-foreground text-sm">Photo upload is turned off in the demo.</p>
+          </div>
+        </div>
+      ) : (
+        <ImagePicker
+          existingUrl={existingImageUrl}
+          file={file}
+          onSelect={setFile}
+          disabled={busy}
+          placeholder={type ? labelFor(type) : 'No photo'}
+          // Only offered while editing: there is nothing stored to remove during
+          // creation.
+          onRemoveExisting={
+            item
+              ? async () => {
+                  setError(null);
 
-                try {
-                  await clothingApi.removeImage(item.id);
-                  setExistingImageUrl(null);
-                } catch (caught) {
-                  setError(
-                    caught instanceof ApiError ? caught.message : 'Could not remove the photo.',
-                  );
-                  throw caught;
+                  try {
+                    await clothingApi.removeImage(item.id);
+                    setExistingImageUrl(null);
+                  } catch (caught) {
+                    setError(
+                      caught instanceof ApiError ? caught.message : 'Could not remove the photo.',
+                    );
+                    throw caught;
+                  }
                 }
-              }
-            : undefined
-        }
-      />
+              : undefined
+          }
+        />
+      )}
 
       <fieldset className="flex flex-col gap-2" disabled={busy}>
         <legend className="mb-2 text-sm font-medium">Seasons</legend>

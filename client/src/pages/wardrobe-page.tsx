@@ -7,6 +7,7 @@ import { ItemCard } from '@/features/clothing/item-card';
 import { labelFor } from '@/features/clothing/labels';
 import type { ClothingItem, LaundryStatus } from '@/features/clothing/types';
 import { useWardrobe } from '@/features/clothing/use-wardrobe';
+import { useAuth } from '@/features/auth/use-auth';
 import { ApiError } from '@/lib/api';
 
 /** Kept in the URL, so the filter survives back-navigation and is linkable. */
@@ -35,6 +36,7 @@ function matches(item: ClothingItem, filter: FilterValue): boolean {
 
 export function WardrobePage() {
   const { items, error, replaceItem } = useWardrobe();
+  const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const [laundryError, setLaundryError] = useState<string | null>(null);
 
@@ -90,12 +92,17 @@ export function WardrobePage() {
         {/* Quick add leads, since photo-first capture is the fast path on a
             phone; the full form stays available for a considered entry. */}
         <div className="flex flex-wrap gap-2">
-          <Button asChild>
-            <Link to="/items/quick-add">Quick add</Link>
-          </Button>
-          <Button asChild variant="outline">
-            <Link to="/items/bulk-add">Bulk add</Link>
-          </Button>
+          {/* Both exist to upload photos, which the demo sandbox does not allow. */}
+          {user?.isDemo ? null : (
+            <>
+              <Button asChild>
+                <Link to="/items/quick-add">Quick add</Link>
+              </Button>
+              <Button asChild variant="outline">
+                <Link to="/items/bulk-add">Bulk add</Link>
+              </Button>
+            </>
+          )}
           <Button asChild variant="ghost">
             <Link to="/items/new">Full form</Link>
           </Button>
