@@ -96,7 +96,12 @@ export function countLaundryGarments(entries: TripEntry[]): number {
   return seen.size;
 }
 
+/** Wardrobe garments plus what the user has counted in by hand. */
+export function categoryProgress(row: CategoryGuidance): number {
+  return row.planned + row.manual;
+}
+
 /** A target met or exceeded is a neutral state, never a problem. */
 export function isTargetMet(row: CategoryGuidance): boolean {
-  return row.recommended !== null && row.planned >= row.recommended;
+  return row.recommended !== null && categoryProgress(row) >= row.recommended;
 }

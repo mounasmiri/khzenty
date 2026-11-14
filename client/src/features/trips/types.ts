@@ -27,7 +27,10 @@ export interface CategoryGuidance {
   category: string;
   /** Null: no target for this category, only a count of what is planned. */
   recommended: number | null;
+  /** From the wardrobe: garments added directly, plus those inside outfits. */
   planned: number;
+  /** Packed outside the app (no photo); set with the row's stepper. */
+  manual: number;
 }
 
 export interface TripDetail extends TripSummary {
@@ -74,3 +77,6 @@ export interface TripInput {
 
 /** The server's cap, mirrored so the form can say so before the request does. */
 export const MAX_TRIP_DAYS = 60;
+
+/** The server's cap on a manual count, mirrored so the stepper stops there. */
+export const MAX_MANUAL_COUNT = 50;

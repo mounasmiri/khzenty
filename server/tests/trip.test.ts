@@ -419,4 +419,88 @@ describe('trips', () => {
       await agent.get('/api/trips/destinations?q=P').expect(400);
     });
   });
+
+  describe('manual category counts', () => {
+    const put = (who: typeof agent, tripId: string, category: string, body: unknown) =>
+      who.put(`/api/trips/${tripId}/category-counts/${category}`).send(body as object);
+
+    const row = (trip: { packing: { categories: { category: string }[] } }, category: string) =>
+      trip.packing.categories.find((c) => c.category === category) as
+        | { planned: number; manual: number; recommended: number | null }
+        | undefined;
+
+    it('stores a count and returns it in the trip detail beside the wardrobe count', async () => {
+      const id = (await createTrip()).body.trip.id as string;
+      const shirt = await createItem('TSHIRT');
+      await agent.post(`/api/trips/${id}/entries`).send({ clothingItemId: shirt }).expect(201);
+
+      const res = await put(agent, id, 'UNDERWEAR', { count: 3 }).expect(200);
+      expect(res.body.categoryCount).toEqual({ category: 'UNDERWEAR', count: 3 });
+      await put(agent, id, 'TOP', { count: 2 }).expect(200);
+
+      const detail = (await agent.get(`/api/trips/${id}`).expect(200)).body.trip;
+
+      expect(row(detail, 'UNDERWEAR')).toMatchObject({ planned: 0, manual: 3, recommended: 5 });
+      // One from the wardrobe, two typed in: counted separately, not merged.
+      expect(row(detail, 'TOP')).toMatchObject({ planned: 1, manual: 2 });
+    });
+
+    it('may exceed the suggestion', async () => {
+      const id = (await createTrip()).body.trip.id as string;
+
+      await put(agent, id, 'UNDERWEAR', { count: 50 }).expect(200);
+    });
+
+    it('overwrites, and zero removes the row', async () => {
+      const id = (await createTrip()).body.trip.id as string;
+
+      await put(agent, id, 'UNDERWEAR', { count: 4 }).expect(200);
+      await put(agent, id, 'UNDERWEAR', { count: 2 }).expect(200);
+      expect(await prisma.tripCategoryCount.count({ where: { tripId: id } })).toBe(1);
+
+      await put(agent, id, 'UNDERWEAR', { count: 0 }).expect(200);
+      expect(await prisma.tripCategoryCount.count({ where: { tripId: id } })).toBe(0);
+    });
+
+    it('rejects out-of-range and non-integer counts', async () => {
+      const id = (await createTrip()).body.trip.id as string;
+
+      await put(agent, id, 'TOP', { count: -1 }).expect(400);
+      await put(agent, id, 'TOP', { count: 51 }).expect(400);
+      await put(agent, id, 'TOP', { count: 1.5 }).expect(400);
+      await put(agent, id, 'TOP', { count: '3' }).expect(400);
+      await put(agent, id, 'TOP', {}).expect(400);
+    });
+
+    it('rejects an unknown category', async () => {
+      const id = (await createTrip()).body.trip.id as string;
+
+      await put(agent, id, 'HATS', { count: 1 }).expect(400);
+    });
+
+    it("treats another user's trip as not found and writes nothing", async () => {
+      const theirs = (await createTrip({}, intruder)).body.trip.id as string;
+
+      await put(agent, theirs, 'TOP', { count: 2 }).expect(404);
+      expect(await prisma.tripCategoryCount.count()).toBe(0);
+    });
+
+    it('is deleted with the trip', async () => {
+      const id = (await createTrip()).body.trip.id as string;
+      await put(agent, id, 'TOP', { count: 2 }).expect(200);
+
+      await agent.delete(`/api/trips/${id}`).expect(204);
+
+      expect(await prisma.tripCategoryCount.count()).toBe(0);
+    });
+
+    it('shows a manual count even for a category with no suggestion', async () => {
+      const id = (await createTrip()).body.trip.id as string;
+      await put(agent, id, 'DRESS', { count: 1 }).expect(200);
+
+      const detail = (await agent.get(`/api/trips/${id}`).expect(200)).body.trip;
+
+      expect(row(detail, 'DRESS')).toMatchObject({ recommended: null, manual: 1 });
+    });
+  });
 });

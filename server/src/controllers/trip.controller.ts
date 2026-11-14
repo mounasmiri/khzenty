@@ -1,7 +1,7 @@
 import type { RequestHandler } from 'express';
 
 import { HttpError } from '../lib/http-error.js';
-import { destinationSearchSchema } from '../schemas/trip.schema.js';
+import { categoryParamSchema, destinationSearchSchema } from '../schemas/trip.schema.js';
 import { searchDestinations } from '../services/geocoding.service.js';
 import {
   addTripEntry,
@@ -11,6 +11,7 @@ import {
   getTripWeather,
   listTrips,
   removeTripEntry,
+  setCategoryCount,
   setEntryPacked,
   updateTrip,
 } from '../services/trip.service.js';
@@ -88,4 +89,18 @@ export const patchTripEntry: RequestHandler = async (req, res) => {
 export const deleteTripEntry: RequestHandler = async (req, res) => {
   await removeTripEntry(userIdOf(req), tripIdOf(req), entryIdOf(req));
   res.status(204).send();
+};
+
+export const putCategoryCount: RequestHandler = async (req, res) => {
+  const category = categoryParamSchema.safeParse(req.params['category']);
+
+  if (!category.success) {
+    throw new HttpError(400, 'category: not a known category');
+  }
+
+  const { count } = req.body as { count: number };
+
+  res
+    .status(200)
+    .json({ categoryCount: await setCategoryCount(userIdOf(req), tripIdOf(req), category.data, count) });
 };

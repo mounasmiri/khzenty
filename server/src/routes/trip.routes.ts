@@ -11,12 +11,14 @@ import {
   patchTripEntry,
   postTrip,
   postTripEntry,
+  putCategoryCount,
 } from '../controllers/trip.controller.js';
 import { requireAuth } from '../middlewares/auth.middleware.js';
 import { validateBody } from '../middlewares/validate.middleware.js';
 import {
   addTripEntrySchema,
   createTripSchema,
+  setCategoryCountSchema,
   updateTripEntrySchema,
   updateTripSchema,
 } from '../schemas/trip.schema.js';
@@ -41,3 +43,5 @@ tripRouter.get('/:id/weather', getWeatherForTrip);
 tripRouter.post('/:id/entries', validateBody(addTripEntrySchema), postTripEntry);
 tripRouter.patch('/:id/entries/:entryId', validateBody(updateTripEntrySchema), patchTripEntry);
 tripRouter.delete('/:id/entries/:entryId', deleteTripEntry);
+
+tripRouter.put('/:id/category-counts/:category', validateBody(setCategoryCountSchema), putCategoryCount);

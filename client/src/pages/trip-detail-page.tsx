@@ -176,6 +176,38 @@ export function TripDetailPage() {
     }
   }
 
+  const setManualLocally = (category: string, manual: number) =>
+    setTrip((current) =>
+      current
+        ? {
+            ...current,
+            packing: {
+              ...current.packing,
+              categories: current.packing.categories.map((row) =>
+                row.category === category ? { ...row, manual } : row,
+              ),
+            },
+          }
+        : current,
+    );
+
+  async function changeManual(category: string, count: number) {
+    if (!trip) return;
+
+    const previous = trip.packing.categories.find((row) => row.category === category)?.manual ?? 0;
+
+    setActionError(null);
+    // Optimistic, like the packed tick; put back if the save fails.
+    setManualLocally(category, count);
+
+    try {
+      await tripsApi.setCategoryCount(trip.id, category, count);
+    } catch (caught) {
+      setManualLocally(category, previous);
+      setActionError(messageFrom(caught));
+    }
+  }
+
   async function removeEntry(entry: TripEntry) {
     if (!trip) return;
 
@@ -289,7 +321,11 @@ export function TripDetailPage() {
         <TripWeatherStrip weather={weather} />
       </section>
 
-      <CategoryProgress rows={trip.packing.categories} days={trip.days} />
+      <CategoryProgress
+        rows={trip.packing.categories}
+        days={trip.days}
+        onChangeManual={(category, count) => void changeManual(category, count)}
+      />
 
       <section className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">

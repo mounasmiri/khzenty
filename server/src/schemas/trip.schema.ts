@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { ClothingCategory } from '../generated/prisma/enums.js';
 import { daysInclusive, isCalendarDate, parseCalendarDate } from '../lib/calendar-date.js';
 
 /** A trip longer than this is almost certainly a typo, and drives a long checklist. */
@@ -98,6 +99,16 @@ export const addTripEntrySchema = z
   });
 
 export const updateTripEntrySchema = z.object({ packed: z.boolean() }).strict();
+
+/** Items packed that are not in the app; guidance never needs more than this. */
+export const MAX_MANUAL_COUNT = 50;
+
+export const setCategoryCountSchema = z
+  .object({ count: z.number().int().min(0).max(MAX_MANUAL_COUNT) })
+  .strict();
+
+/** The category must be a real `ClothingCategory`, not just any string. */
+export const categoryParamSchema = z.enum(ClothingCategory);
 
 export const destinationSearchSchema = z.object({
   q: z.string().trim().min(2).max(120),
