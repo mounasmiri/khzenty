@@ -55,4 +55,34 @@ describe('production configuration', () => {
   it('refuses a wildcard origin in any environment', async () => {
     expect((await bootWith({ NODE_ENV: 'development', CLIENT_ORIGIN: '*' })).exited).toBe(true);
   });
+
+  it('keeps the demo sandbox off, with a cap of 200, unless told otherwise', async () => {
+    vi.resetModules();
+    for (const [key, value] of Object.entries(BASE)) vi.stubEnv(key, value);
+    vi.stubEnv('DEMO_LOGIN_ENABLED', '');
+    vi.stubEnv('DEMO_MAX_USERS', '');
+    vi.spyOn(process, 'exit').mockImplementation((() => undefined) as never);
+
+    // An empty string is "not set" to dotenv-style config, but zod would read it
+    // as a value; remove the keys outright.
+    delete process.env['DEMO_LOGIN_ENABLED'];
+    delete process.env['DEMO_MAX_USERS'];
+
+    const { env } = await import('../src/config/env.js');
+
+    expect(env.DEMO_LOGIN_ENABLED).toBe(false);
+    expect(env.DEMO_MAX_USERS).toBe(200);
+  });
+
+  it('turns the demo sandbox on only for the exact value "true"', async () => {
+    vi.resetModules();
+    for (const [key, value] of Object.entries({ ...BASE, DEMO_LOGIN_ENABLED: 'true' })) {
+      vi.stubEnv(key, value);
+    }
+    vi.spyOn(process, 'exit').mockImplementation((() => undefined) as never);
+
+    const { env } = await import('../src/config/env.js');
+
+    expect(env.DEMO_LOGIN_ENABLED).toBe(true);
+  });
 });

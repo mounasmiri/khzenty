@@ -7,5 +7,7 @@ export interface PublicUser {
   id: string;
   email: string;
   name: string | null;
+  /** A throwaway per-visitor demo copy. Never true for a real account. */
+  isDemo: boolean;
   createdAt: Date;
 }

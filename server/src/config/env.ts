@@ -25,6 +25,11 @@ const envSchema = z.object({
     .default('false')
     .transform((value) => value === 'true'),
 
+  // Most live demo copies at once. Past this, demo sign-in answers 503 until
+  // older copies expire (24 h), which bounds how much a flood of visitors can
+  // write to the database.
+  DEMO_MAX_USERS: z.coerce.number().int().min(1).max(10_000).default(200),
+
   // Reverse-proxy hops to trust when reading the client IP (rate limiting,
   // logs). 0 means none. Set to the real number behind a proxy (1 for a single
   // load balancer): too high lets a client spoof its IP, too low rate-limits

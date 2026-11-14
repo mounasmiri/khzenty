@@ -72,7 +72,12 @@ export function createUploadSignature(userId: string): UploadSignature {
  * Records an uploaded image against an item after verifying it with
  * Cloudinary. Nothing the client sends is trusted beyond the identifier.
  */
-export async function confirmItemImage(userId: string, itemId: string, publicId: string) {
+export async function confirmItemImage(
+  userId: string,
+  itemId: string,
+  publicId: string,
+  actor: { isDemo: boolean },
+) {
   assertConfigured();
 
   // Ownership of the item first: no point describing an asset for an item the
@@ -109,12 +114,12 @@ export async function confirmItemImage(userId: string, itemId: string, publicId:
   // Re-checked here rather than trusted from the signature: this is the only
   // point where the asset's real format and size are known.
   if (!ALLOWED_FORMATS.includes(format)) {
-    await destroyAssetQuietly(publicId);
+    await destroyAssetQuietly(publicId, actor);
     throw new HttpError(400, `Unsupported image format: ${format || 'unknown'}`);
   }
 
   if (resource.bytes > env.CLOUDINARY_MAX_BYTES) {
-    await destroyAssetQuietly(publicId);
+    await destroyAssetQuietly(publicId, actor);
     throw new HttpError(400, `Image exceeds the ${env.CLOUDINARY_MAX_BYTES} byte limit`);
   }
 
@@ -126,7 +131,7 @@ export async function confirmItemImage(userId: string, itemId: string, publicId:
 
   // Replacing an image leaves the previous asset orphaned, so remove it.
   if (item.imagePublicId && item.imagePublicId !== resource.public_id) {
-    await destroyAssetQuietly(item.imagePublicId);
+    await destroyAssetQuietly(item.imagePublicId, actor);
   }
 
   return updated;
@@ -142,7 +147,7 @@ export async function confirmItemImage(userId: string, itemId: string, publicId:
  * Removing from an item that has no image is a successful no-op rather than an
  * error — the end state the caller asked for is already true.
  */
-export async function removeItemImage(userId: string, itemId: string) {
+export async function removeItemImage(userId: string, itemId: string, actor: { isDemo: boolean }) {
   const item = await prisma.clothingItem.findFirst({
     where: { id: itemId, userId },
     select: { id: true, imagePublicId: true },
@@ -163,7 +168,7 @@ export async function removeItemImage(userId: string, itemId: string) {
   // Best effort, after the update. A failure here orphans an asset rather than
   // leaving the user unable to remove the photo.
   if (item.imagePublicId) {
-    await destroyAssetQuietly(item.imagePublicId);
+    await destroyAssetQuietly(item.imagePublicId, actor);
   }
 
   return updated;
