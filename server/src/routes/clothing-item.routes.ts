@@ -9,8 +9,9 @@ import {
 } from '../controllers/clothing-item.controller.js';
 import { patchLaundryStatus, postMarkWashed } from '../controllers/laundry.controller.js';
 import { deleteItemImage, putItemImage } from '../controllers/upload.controller.js';
+import { forbidDemoUsers } from '../middlewares/forbid-demo.middleware.js';
 import { requireAuth } from '../middlewares/auth.middleware.js';
-import { validateBody } from '../middlewares/validate.middleware.js';
+import { validateBody, validateIdParam } from '../middlewares/validate.middleware.js';
 import {
   createClothingItemSchema,
   updateClothingItemSchema,
@@ -22,6 +23,8 @@ export const clothingItemRouter: Router = Router();
 
 // Applied to the whole router: a new route cannot forget the auth gate.
 clothingItemRouter.use(requireAuth);
+clothingItemRouter.param('id', validateIdParam);
+
 
 clothingItemRouter.get('/', getItems);
 clothingItemRouter.post('/', validateBody(createClothingItemSchema), postItem);
@@ -34,7 +37,12 @@ clothingItemRouter.patch('/:id', validateBody(updateClothingItemSchema), patchIt
 clothingItemRouter.delete('/:id', deleteItemById);
 
 // Attaches an image the client has already uploaded straight to Cloudinary.
-clothingItemRouter.put('/:id/image', validateBody(confirmItemImageSchema), putItemImage);
+clothingItemRouter.put(
+  '/:id/image',
+  forbidDemoUsers,
+  validateBody(confirmItemImageSchema),
+  putItemImage,
+);
 clothingItemRouter.delete('/:id/image', deleteItemImage);
 
 clothingItemRouter.patch(

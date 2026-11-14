@@ -65,6 +65,12 @@ export function AppShell() {
         </div>
       </header>
 
+      {user?.isDemo ? (
+        <p role="note" className="bg-muted text-muted-foreground px-4 py-1.5 text-center text-xs">
+          Demo: your changes are private and deleted after 24 hours.
+        </p>
+      ) : null}
+
       <div className="mx-auto max-w-5xl p-4">
         <Outlet />
       </div>

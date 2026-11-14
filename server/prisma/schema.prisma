@@ -166,6 +166,12 @@ model User {
   /// `PUBLIC_USER_SELECT` in the auth service.
   passwordHash String
 
+  /// A throwaway per-visitor copy of the demo account. Such a user has an
+  /// unusable password hash and a random address, can never upload images, and
+  /// is deleted (cascading to everything it owns) after 24 hours. The template
+  /// account the copies are cloned from is NOT a demo user.
+  isDemo Boolean @default(false)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -173,6 +179,9 @@ model User {
   outfits       Outfit[]
   wearLogs      WearLog[]
   trips         Trip[]
+
+  /// Expired-demo cleanup scans by this pair.
+  @@index([isDemo, createdAt])
 }
 
 /// A single garment the user owns.

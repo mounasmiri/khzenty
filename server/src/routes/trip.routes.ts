@@ -14,7 +14,8 @@ import {
   putCategoryCount,
 } from '../controllers/trip.controller.js';
 import { requireAuth } from '../middlewares/auth.middleware.js';
-import { validateBody } from '../middlewares/validate.middleware.js';
+import { destinationSearchLimiter } from '../middlewares/rate-limit.middleware.js';
+import { validateBody, validateIdParam } from '../middlewares/validate.middleware.js';
 import {
   addTripEntrySchema,
   createTripSchema,
@@ -27,12 +28,15 @@ export const tripRouter: Router = Router();
 
 // Applied to the whole router: a new route cannot forget the auth gate.
 tripRouter.use(requireAuth);
+tripRouter.param('id', validateIdParam);
+tripRouter.param('entryId', validateIdParam);
+
 
 tripRouter.get('/', getTrips);
 tripRouter.post('/', validateBody(createTripSchema), postTrip);
 
 // Declared before `/:id`, which would otherwise swallow "destinations".
-tripRouter.get('/destinations', getDestinations);
+tripRouter.get('/destinations', destinationSearchLimiter, getDestinations);
 
 tripRouter.get('/:id', getTripById);
 tripRouter.patch('/:id', validateBody(updateTripSchema), patchTrip);

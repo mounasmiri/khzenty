@@ -4,10 +4,28 @@ on:
   push:
     branches: [main]
   pull_request:
+    branches: [main]
+
+# Least privilege: these jobs only read the repository.
+permissions:
+  contents: read
+
+# A newer push to the same branch makes the older run pointless.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # One place to bump. Pinned to an exact version so a new Node release cannot
+  # change the build underneath us; Dependabot proposes the action updates, this
+  # value is bumped by hand together with `.nvmrc`-style local tooling.
+  NODE_VERSION: '24.16.0'
 
 jobs:
-  ci:
+  server:
+    name: Server
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     services:
       postgres:
@@ -26,53 +44,92 @@ jobs:
           --health-timeout 5s
           --health-retries 5
 
+    defaults:
+      run:
+        working-directory: server
+
     env:
-      # The service container publishes 5432; compose.yaml uses 5433 locally.
+      # Dummy values — nothing here is a secret, and the env schema needs them.
+      NODE_ENV: development
+      PORT: 4000
+      CLIENT_ORIGIN: http://localhost:5173
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/khzenty?schema=public
       # The suite creates this database itself and refuses any name not ending
       # in "_test", since it truncates every table.
       TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/khzenty_test?schema=public
-      # Throwaway value: the env schema requires 32+ characters.
-      JWT_SECRET: ci-only-secret-at-least-32-characters-long
+      JWT_SECRET: ci-only-dummy-secret-at-least-32-characters-long
 
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '24'
+          node-version: ${{ env.NODE_VERSION }}
           cache: npm
-          cache-dependency-path: |
-            package-lock.json
-            server/package-lock.json
-            client/package-lock.json
+          cache-dependency-path: server/package-lock.json
 
-      # `npm ci` rather than `npm install`, so a drifted lockfile fails the
-      # build instead of being silently updated. Three packages, so three runs.
-      - name: Install (root)
-        run: npm ci
-      - name: Install (server)
-        run: npm ci
-        working-directory: server
-      - name: Install (client)
-        run: npm ci
-        working-directory: client
+      # `npm ci`, not `npm install`: a drifted lockfile fails instead of being
+      # silently rewritten.
+      - run: npm ci
 
-      - name: Lint
-        run: npm run lint
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Apply migrations
+        run: npx prisma migrate deploy
 
       - name: Typecheck
         run: npm run typecheck
 
-      # Split rather than one `npm test`, which already runs both: as a single
-      # step a failure only says "Test", and the two suites fail for unrelated
-      # reasons — the server suite needs the Postgres service, the client suite
-      # needs nothing. Separate steps name the culprit in the Actions summary.
-      - name: Test (server)
-        run: npm run test:server
+      - name: Lint
+        run: npm run lint
 
-      - name: Test (client)
-        run: npm run test:client
+      - name: Test
+        run: npm test
 
       - name: Build
         run: npm run build
+
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=high
+
+  client:
+    name: Client
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    defaults:
+      run:
+        working-directory: client
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+
+      - run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+      # Known exception, tracked in SECURITY.md: @imgly/background-removal pins
+      # zod 3, which is flagged (GHSA-mrhx-c7xc-m3w5) and cannot be upgraded
+      # without a breaking downgrade of the background-removal library. It
+      # reports as a warning here instead of failing every build; remove
+      # `continue-on-error` once the library moves to a patched zod.
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=high
+        continue-on-error: true
