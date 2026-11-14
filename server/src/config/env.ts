@@ -16,6 +16,10 @@ const envSchema = z.object({
     .string()
     .url()
     .refine((value) => !value.includes('*'), 'CLIENT_ORIGIN must be one exact origin, not a wildcard')
+    // Reduced to the bare origin. Browsers send `Origin: https://app.example`
+    // with no path and no trailing slash, so a pasted "https://app.example/"
+    // would otherwise fail the CORS and CSRF origin comparisons on every write.
+    .transform((value) => new URL(value).origin)
     .default('http://localhost:5173'),
 
   // One-click sign-in to the seeded demo account (POST /api/auth/demo). Off by

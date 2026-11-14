@@ -27,6 +27,8 @@ anything exploitable.
 | **Third-party calls** | Weather and geocoding are made by the server only, with parameters built through `URLSearchParams` (encoded), a 4–5 s timeout, and graceful degradation. The browser never contacts them. |
 | **Health** | `GET /api/health` runs `SELECT 1`; `503 {"status":"degraded"}` when the database is unreachable. In production the body is only `{"status": "ok" | "degraded"}`. |
 | **Demo sandbox** | `POST /api/auth/demo` is off unless `DEMO_LOGIN_ENABLED=true` (otherwise an ordinary 404). It takes no input: it clones the fixed template account `demo@khzenty.test` into a **new, private `isDemo` user** (random `.test` address, an unusable password hash, so it can never be signed into by password) and issues the normal cookie session. Visitors never share data, and the template is never signed into. Demo copies cannot upload (`403` on the signature and attach endpoints), and **can never destroy a Cloudinary asset** — they borrow the template's images by reference, so deletion and replacement skip destruction for demo users, and an asset still referenced by any other row is never destroyed for anyone. Copies are deleted (cascading) after 24 h, on every demo sign-in and at server boot; at most `DEMO_MAX_USERS` exist, then `503`. Same rate limit as login. |
+| **Production seed** | `npm run db:seed` refuses any database that is not local, whatever `NODE_ENV` is, unless `SEED_ALLOW_PRODUCTION=true` is spelled exactly. In that mode it touches only the demo template, gives it an unusable password (the development password is public), reads or deletes no other user's rows, and never runs on deploy. Photo files are validated to be Cloudinary `https` links. |
+| **Database connection** | Idle-connection errors are handled instead of crashing the process; connection attempts (never statements) are retried while a serverless database wakes. Migrations use a separate direct URL. |
 | **Client** | No `dangerouslySetInnerHTML`, `innerHTML` or `eval`. The only browser storage is a non-sensitive consent flag. No tokens in `localStorage`. |
 | **Supply chain** | CI runs `npm audit --omit=dev --audit-level=high` on both packages; Dependabot proposes npm and GitHub Actions updates weekly. |
 
@@ -58,7 +60,9 @@ These are real, understood, and not fixed:
 6. **Third-party images.** Garment photos are served from Cloudinary URLs; their privacy
    is whatever the Cloudinary delivery settings allow (public by URL).
 7. **Demo sandbox limits.** Visitors are anonymous and can create garments, outfits and trips in their copy for 24 hours. That is bounded by the per-IP rate limit on sign-in, the live-copy cap, the body size limit and the 24 h expiry, but there is no per-copy row quota. The cap check is not atomic, so a burst can briefly exceed `DEMO_MAX_USERS` by a few. Many visitors behind one NAT share the sign-in budget. Cleanup is opportunistic (on demo sign-in and at boot), so with no traffic expired copies wait for the next one.
-8. **Request logging.** Access logs (`morgan`, production) include URL paths and query
+8. **Client IP depends on the proxy chain.** Behind Vercel's rewrite and Render, `TRUST_PROXY=2` makes rate limiting see each visitor; the right value depends on how those platforms set `X-Forwarded-For` and should be confirmed once after deploying (README → Deployment). Too low puts all visitors in one bucket; too high lets a visitor spoof their address.
+9. **Preview deployments cannot write.** The origin check accepts exactly one origin (`CLIENT_ORIGIN`), so Vercel preview URLs are refused by design.
+10. **Request logging.** Access logs (`morgan`, production) include URL paths and query
    strings, which for destination search contain the city typed.
 
 ## Operating notes

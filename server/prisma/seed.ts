@@ -16,7 +16,7 @@
  * without a photo stay without one; the run prints which.
  */
 import { prisma } from '../src/config/prisma.js';
-import { DEMO_EMAIL } from '../src/lib/demo.js';
+import { DEMO_EMAIL, UNUSABLE_PASSWORD_HASH } from '../src/lib/demo.js';
 import {
   ClothingCategory,
   ClothingType,
@@ -24,6 +24,8 @@ import {
   Occasion,
   Season,
 } from '../src/generated/prisma/enums.js';
+import { DEFAULT_PHOTOS_FILE, readPhotosFile } from './demo-photos.js';
+import { decideSeedMode } from './seed-target.js';
 import {
   ALL_SEASONS,
   DEMO_ITEMS,
@@ -123,9 +125,17 @@ async function printDemoSummary(userId: string): Promise<void> {
 }
 
 async function main(): Promise<void> {
-  if (process.env['NODE_ENV'] === 'production') {
-    throw new Error('Refusing to seed demo accounts with NODE_ENV=production.');
-  }
+  // Refuses anything that is not a local database unless explicitly opted in.
+  // `production` mode touches ONLY the demo template: no dev accounts, no
+  // usable password, no other user's rows.
+  const mode = decideSeedMode({
+    nodeEnv: process.env['NODE_ENV'],
+    databaseUrl: process.env['DATABASE_URL'] ?? '',
+    allowProduction: process.env['SEED_ALLOW_PRODUCTION'],
+  });
+  const production = mode === 'production';
+
+  console.log(`[seed] Mode: ${mode}${production ? ' (demo template only)' : ''}`);
 
   // Read before the delete below, which cascades to the garments and would
   // otherwise drop the only record of where each photo lives in Cloudinary.
@@ -136,6 +146,25 @@ async function main(): Promise<void> {
   const photos = new Map<string, KeptPhoto>(
     kept.map((row) => [row.id, { imageUrl: row.imageUrl, imagePublicId: row.imagePublicId }]),
   );
+
+  // A brand-new database has no photo links yet. Optionally take them from a
+  // file exported from the dev database (`npm run db:export-demo-photos`);
+  // anything already on the account wins, so a refresh never replaces a link.
+  const photosFile = process.env['SEED_PHOTOS_FILE'];
+
+  if (photosFile) {
+    const fromFile = await readPhotosFile(photosFile === 'default' ? DEFAULT_PHOTOS_FILE : photosFile);
+    let added = 0;
+
+    for (const [id, photo] of fromFile) {
+      if (!photos.has(id)) {
+        photos.set(id, photo);
+        added += 1;
+      }
+    }
+
+    console.log(`[seed] Photo links from file: ${fromFile.size} (${added} new, ${fromFile.size - added} already present)`);
+  }
 
   const seededIds = new Set(DEMO_ITEMS.map((item) => item.id));
   const orphaned = kept.filter((row) => !seededIds.has(row.id));
@@ -150,15 +179,19 @@ async function main(): Promise<void> {
 
   // Cascade clears each user's garments, outfits, trips, wear log and membership rows.
   const { count } = await prisma.user.deleteMany({
-    where: { email: { in: [DEMO_EMAIL, SECOND_EMAIL] } },
+    // Production: the template and nothing else.
+    where: { email: { in: production ? [DEMO_EMAIL] : [DEMO_EMAIL, SECOND_EMAIL] } },
   });
 
   if (count > 0) {
     console.log(`[seed] Removed ${count} previously seeded user(s).`);
   }
 
-  const demoId = await seedDemoTemplate(photos);
-  await seedUser(SECOND_EMAIL, 'Second User', SECOND_ITEMS, SECOND_OUTFITS);
+  const demoId = await seedDemoTemplate(photos, production ? UNUSABLE_PASSWORD_HASH : undefined);
+
+  if (!production) {
+    await seedUser(SECOND_EMAIL, 'Second User', SECOND_ITEMS, SECOND_OUTFITS);
+  }
 
   await printDemoSummary(demoId);
 
@@ -172,7 +205,11 @@ async function main(): Promise<void> {
   console.log(
     `[seed] Done. users=${users} clothingItems=${clothingItems} outfits=${outfits} outfitItems=${outfitItems}`,
   );
-  console.log(`[seed] Dev login: ${DEMO_EMAIL} / ${DEV_PASSWORD}`);
+  if (production) {
+    console.log('[seed] The template has no usable password; visitors reach it only through demo copies.');
+  } else {
+    console.log(`[seed] Dev login: ${DEMO_EMAIL} / ${DEV_PASSWORD}`);
+  }
 }
 
 try {

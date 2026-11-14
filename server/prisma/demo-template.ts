@@ -475,12 +475,19 @@ export async function seedUser(
   items: readonly SeedItem[],
   outfits: readonly SeedOutfit[],
   photos: ReadonlyMap<string, KeptPhoto> = new Map(),
+  /**
+   * Defaults to a hash of the published dev password, which is fine locally.
+   * A production template must pass an unusable hash instead: its password
+   * would otherwise be public, and anyone could sign in and edit the account
+   * every demo copy is cloned from.
+   */
+  passwordHash?: string,
 ): Promise<string> {
   const user = await prisma.user.create({
     data: {
       email,
       name,
-      passwordHash: await hashPassword(DEV_PASSWORD),
+      passwordHash: passwordHash ?? (await hashPassword(DEV_PASSWORD)),
       // Spread: Prisma's input type is mutable, the parameter is readonly.
       clothingItems: {
         create: items.map((item) => ({ ...item, ...(photos.get(item.id as string) ?? {}) })),
@@ -577,8 +584,11 @@ export async function seedDemoExtras(userId: string): Promise<void> {
  * Creates the template demo account exactly as the seed script does, minus the
  * deletion of a previous one and the photo restore. Returns its id.
  */
-export async function seedDemoTemplate(photos: ReadonlyMap<string, KeptPhoto> = new Map()): Promise<string> {
-  const id = await seedUser(DEMO_EMAIL, 'Demo User', DEMO_ITEMS, DEMO_OUTFITS, photos);
+export async function seedDemoTemplate(
+  photos: ReadonlyMap<string, KeptPhoto> = new Map(),
+  passwordHash?: string,
+): Promise<string> {
+  const id = await seedUser(DEMO_EMAIL, 'Demo User', DEMO_ITEMS, DEMO_OUTFITS, photos, passwordHash);
   await seedDemoExtras(id);
 
   return id;
