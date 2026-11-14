@@ -168,13 +168,28 @@ export async function getTrip(userId: string, id: string) {
     entries.map((entry) => ({ packed: entry.packed, items: entryGarments(entry) })),
   );
 
+  const manualRows = await prisma.tripCategoryCount.findMany({
+    where: { tripId: id },
+    select: { category: true, count: true },
+  });
+  const manual = new Map(manualRows.map((row) => [row.category, row.count]));
+
   const categories = CATEGORY_ORDER.flatMap((category) => {
     const recommendedCount = recommended[category] ?? null;
     const plannedCount = planned[category] ?? 0;
+    const manualCount = manual.get(category) ?? 0;
 
-    return recommendedCount === null && plannedCount === 0
+    return recommendedCount === null && plannedCount === 0 && manualCount === 0
       ? []
-      : [{ category, recommended: recommendedCount, planned: plannedCount }];
+      : [
+          {
+            category,
+            recommended: recommendedCount,
+            // From the wardrobe only; `manual` is added by the reader.
+            planned: plannedCount,
+            manual: manualCount,
+          },
+        ];
   });
 
   return {
@@ -351,4 +366,30 @@ export async function setEntryPacked(
   }
 
   return { id: entryId, packed };
+}
+
+/**
+ * Sets how many items of a category are packed outside the app.
+ *
+ * Zero deletes the row, so "no row" and "0" mean the same thing.
+ */
+export async function setCategoryCount(
+  userId: string,
+  tripId: string,
+  category: ClothingCategory,
+  count: number,
+) {
+  await findOwnedTrip(userId, tripId);
+
+  if (count === 0) {
+    await prisma.tripCategoryCount.deleteMany({ where: { tripId, category } });
+  } else {
+    await prisma.tripCategoryCount.upsert({
+      where: { tripId_category: { tripId, category } },
+      create: { tripId, category, count },
+      update: { count },
+    });
+  }
+
+  return { category, count };
 }

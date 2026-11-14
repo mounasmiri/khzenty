@@ -31,6 +31,13 @@ export const tripsApi = {
   removeEntry: (tripId: string, entryId: string) =>
     api.delete<void>(`/trips/${enc(tripId)}/entries/${enc(entryId)}`),
 
+  /** Sets an absolute count (not a delta), so a retry is harmless. */
+  setCategoryCount: (tripId: string, category: string, count: number) =>
+    api.put<{ categoryCount: { category: string; count: number } }>(
+      `/trips/${enc(tripId)}/category-counts/${enc(category)}`,
+      { count },
+    ),
+
   setPacked: (tripId: string, entryId: string, packed: boolean) =>
     api.patch<{ entry: { id: string; packed: boolean } }>(
       `/trips/${enc(tripId)}/entries/${enc(entryId)}`,

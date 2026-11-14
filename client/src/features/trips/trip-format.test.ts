@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import type { OutfitGarment } from '@/features/outfits/types';
 import {
   countLaundryGarments,
+  categoryProgress,
   daysLabel,
   formatDateRange,
   groupEntries,
@@ -96,9 +97,23 @@ describe('countLaundryGarments', () => {
 
 describe('isTargetMet', () => {
   it('treats meeting or exceeding as met, and no target as not met', () => {
-    expect(isTargetMet({ category: 'TOP', recommended: 3, planned: 3 })).toBe(true);
-    expect(isTargetMet({ category: 'TOP', recommended: 3, planned: 5 })).toBe(true);
-    expect(isTargetMet({ category: 'TOP', recommended: 3, planned: 1 })).toBe(false);
-    expect(isTargetMet({ category: 'DRESS', recommended: null, planned: 2 })).toBe(false);
+    expect(isTargetMet({ category: 'TOP', recommended: 3, planned: 3, manual: 0 })).toBe(true);
+    expect(isTargetMet({ category: 'TOP', recommended: 3, planned: 5, manual: 0 })).toBe(true);
+    expect(isTargetMet({ category: 'TOP', recommended: 3, planned: 1, manual: 0 })).toBe(false);
+    expect(isTargetMet({ category: 'DRESS', recommended: null, planned: 2, manual: 0 })).toBe(false);
+  });
+});
+
+describe('categoryProgress', () => {
+  it('adds the manual count to the wardrobe count', () => {
+    // Tops 3/7: two from the app, one counted by hand.
+    expect(categoryProgress({ category: 'TOP', recommended: 7, planned: 2, manual: 1 })).toBe(3);
+    // Underwear 5/8 with nothing in the app.
+    expect(categoryProgress({ category: 'UNDERWEAR', recommended: 8, planned: 0, manual: 5 })).toBe(5);
+  });
+
+  it('lets manual counts complete a target the wardrobe alone would not', () => {
+    expect(isTargetMet({ category: 'UNDERWEAR', recommended: 5, planned: 0, manual: 2 })).toBe(false);
+    expect(isTargetMet({ category: 'UNDERWEAR', recommended: 5, planned: 1, manual: 4 })).toBe(true);
   });
 });

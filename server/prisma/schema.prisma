@@ -335,7 +335,8 @@ model Trip {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  entries TripEntry[]
+  entries        TripEntry[]
+  categoryCounts TripCategoryCount[]
 
   @@index([userId])
 }
@@ -372,4 +373,21 @@ model TripEntry {
   @@unique([tripId, outfitId])
   @@index([clothingItemId])
   @@index([outfitId])
+}
+
+/// How many items of a category the user has packed that are not in the app
+/// (socks, pyjamas, anything without a photo), per trip.
+///
+/// A row exists only while the count is above zero; setting it back to zero
+/// deletes the row, so "no row" and "0" mean the same thing.
+model TripCategoryCount {
+  id String @id @default(cuid())
+
+  tripId String
+  trip   Trip   @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  category ClothingCategory
+  count    Int
+
+  @@unique([tripId, category])
 }

@@ -190,6 +190,7 @@ That request goes through the Vite dev proxy to the API, so a JSON response conf
 | POST | `/api/trips/:id/entries` | cookie | Add a garment or an outfit: exactly one of `clothingItemId` / `outfitId`; `409` if already listed |
 | PATCH | `/api/trips/:id/entries/:entryId` | cookie | Set `{ packed: boolean }` |
 | DELETE | `/api/trips/:id/entries/:entryId` | cookie | Remove an entry, `204` |
+| PUT | `/api/trips/:id/category-counts/:category` | cookie | Set how many items of a category are packed outside the app: `{ count }`, integer 0–50; `0` clears it |
 
 **Laundry status is manual** — `CLEAN` or `IN_LAUNDRY`, never inferred, since the app has no way to know a garment is in the wash. `laundryAt` records when the status last changed and only moves when it actually changes, so re-sending the same status doesn't restart the clock on how long something has been in the basket.
 
