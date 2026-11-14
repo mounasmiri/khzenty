@@ -1,4 +1,5 @@
 import { prisma } from '../config/prisma.js';
+import { DEMO_EMAIL } from '../lib/demo.js';
 import { HttpError } from '../lib/http-error.js';
 import { hashPassword, verifyPassword } from '../lib/password.js';
 import type { LoginInput, RegisterInput } from '../schemas/auth.schema.js';
@@ -80,6 +81,26 @@ export async function login(input: LoginInput): Promise<PublicUser> {
   }
 
   const { passwordHash: _passwordHash, ...user } = record;
+  return user;
+}
+
+/**
+ * Signs in as the seeded demo account — and only that account.
+ *
+ * Takes no input on purpose: the email is the `DEMO_EMAIL` constant, so no
+ * request can steer this at another user. A missing account is a 404 rather
+ * than a created one, since creating accounts is the seed's job.
+ */
+export async function loginAsDemo(): Promise<PublicUser> {
+  const user = await prisma.user.findUnique({
+    where: { email: DEMO_EMAIL },
+    select: PUBLIC_USER_SELECT,
+  });
+
+  if (!user) {
+    throw new HttpError(404, 'The demo account is not available');
+  }
+
   return user;
 }
 
