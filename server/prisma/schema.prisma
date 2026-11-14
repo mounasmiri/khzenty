@@ -172,6 +172,7 @@ model User {
   clothingItems ClothingItem[]
   outfits       Outfit[]
   wearLogs      WearLog[]
+  trips         Trip[]
 }
 
 /// A single garment the user owns.
@@ -221,6 +222,7 @@ model ClothingItem {
   updatedAt DateTime @updatedAt
 
   outfitItems OutfitItem[]
+  tripEntries TripEntry[]
 
   @@index([userId])
   /// The wardrobe grid filtered by category is the most common read.
@@ -254,8 +256,9 @@ model Outfit {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  items    OutfitItem[]
-  wearLogs WearLog[]
+  items       OutfitItem[]
+  wearLogs    WearLog[]
+  tripEntries TripEntry[]
 
   @@index([userId])
 }
@@ -304,5 +307,69 @@ model WearLog {
   changedItemIds String[]
 
   @@index([userId])
+  @@index([outfitId])
+}
+
+/// A trip the user is packing for.
+///
+/// Dates are calendar dates (`@db.Date`), not instants: "10 to 14 June" means
+/// the same days wherever the user is, and a timestamp would invite off-by-one
+/// bugs around midnight and daylight saving.
+///
+/// `latitude`/`longitude` are resolved from the destination by the server
+/// (Open-Meteo geocoding) and stored, so a weather lookup never has to
+/// geocode again.
+model Trip {
+  id String @id @default(cuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  name            String
+  destinationName String
+  latitude        Float
+  longitude       Float
+  startDate       DateTime @db.Date
+  endDate         DateTime @db.Date
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  entries TripEntry[]
+
+  @@index([userId])
+}
+
+/// One line on a trip's packing list: either a garment or an outfit.
+///
+/// Exactly one of `clothingItemId` / `outfitId` is set. Prisma cannot express
+/// that, so the migration adds a CHECK constraint (`TripEntry_exactly_one_target`)
+/// and the service only ever writes valid rows.
+///
+/// The two unique constraints stop the same garment or outfit being listed
+/// twice. Postgres treats NULLs as distinct, so the unset column never makes
+/// two different rows collide.
+///
+/// Cascades from the garment/outfit too: deleting a garment removes it from
+/// every trip rather than leaving a dangling entry.
+model TripEntry {
+  id String @id @default(cuid())
+
+  tripId String
+  trip   Trip   @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  clothingItemId String?
+  clothingItem   ClothingItem? @relation(fields: [clothingItemId], references: [id], onDelete: Cascade)
+
+  outfitId String?
+  outfit   Outfit? @relation(fields: [outfitId], references: [id], onDelete: Cascade)
+
+  packed Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  @@unique([tripId, clothingItemId])
+  @@unique([tripId, outfitId])
+  @@index([clothingItemId])
   @@index([outfitId])
 }

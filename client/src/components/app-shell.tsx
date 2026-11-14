@@ -6,6 +6,7 @@ import { useAuth } from '@/features/auth/use-auth';
 const NAV = [
   { to: '/', label: 'Wardrobe', end: true },
   { to: '/outfits', label: 'Outfits', end: false },
+  { to: '/trips', label: 'Trips', end: false },
   { to: '/laundry', label: 'Laundry', end: false },
 ] as const;
 
@@ -28,7 +29,9 @@ export function AppShell() {
   return (
     <div className="bg-background text-foreground min-h-screen">
       <header className="bg-header text-header-foreground border-b">
-        <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 p-4">
+        {/* flex-wrap: with four nav entries the row no longer fits a phone, so
+            the nav drops under the logo instead of overflowing the page. */}
+        <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-x-4 gap-y-2 p-4">
           <Link to="/" className="flex flex-col">
             <span className="text-xl font-semibold tracking-tight">Khzenty</span>
             <span className="text-header-muted text-xs">
@@ -36,7 +39,7 @@ export function AppShell() {
             </span>
           </Link>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             {NAV.map((entry) => (
               <NavLink key={entry.to} to={entry.to} end={entry.end}>
                 {({ isActive }) => (

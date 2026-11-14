@@ -29,6 +29,14 @@ interface GarmentPickerProps {
   items: readonly ClothingItem[];
   selectedIds: readonly string[];
   onToggle: (id: string) => void;
+  /**
+   * Lets garments in the laundry be selected. Off by default, because an outfit
+   * is something to wear now; a trip is planned ahead, so it turns this on and
+   * relies on the badge to flag the garment instead.
+   */
+  allowLaundry?: boolean;
+  /** Most garments that can be selected. Defaults to the outfit limit. */
+  limit?: number;
 }
 
 /**
@@ -43,9 +51,15 @@ interface GarmentPickerProps {
  * disabled, with its badge, it explains itself — and the laundry basket is one
  * tap away.
  */
-export function GarmentPicker({ items, selectedIds, onToggle }: GarmentPickerProps) {
+export function GarmentPicker({
+  items,
+  selectedIds,
+  onToggle,
+  allowLaundry = false,
+  limit = MAX_OUTFIT_ITEMS,
+}: GarmentPickerProps) {
   const selected = useMemo(() => new Set(selectedIds), [selectedIds]);
-  const atCapacity = selectedIds.length >= MAX_OUTFIT_ITEMS;
+  const atCapacity = selectedIds.length >= limit;
 
   const groups = useMemo(() => {
     const byCategory = new Map<string, ClothingItem[]>();
@@ -96,7 +110,7 @@ export function GarmentPicker({ items, selectedIds, onToggle }: GarmentPickerPro
               const inLaundry = item.laundryStatus === 'IN_LAUNDRY';
               // Already-selected garments stay tappable at capacity, or there
               // would be no way to deselect one and swap it out.
-              const disabled = inLaundry || (atCapacity && !isSelected);
+              const disabled = (inLaundry && !allowLaundry) || (atCapacity && !isSelected);
 
               return (
                 <li key={item.id} className="shrink-0">
