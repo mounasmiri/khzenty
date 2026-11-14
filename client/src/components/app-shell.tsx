@@ -9,17 +9,29 @@ const NAV = [
   { to: '/laundry', label: 'Laundry', end: false },
 ] as const;
 
+// Header colours come from the --header/--nav tokens; in dark mode those tokens
+// reproduce the previous neutral look. The focus ring is overridden because the
+// default (brown) vanishes against the brown bar.
+const NAV_FOCUS =
+  'focus-visible:border-header-ring focus-visible:ring-header-ring/50';
+const NAV_BASE = `text-header-foreground hover:bg-nav-hover hover:text-nav-hover-foreground dark:hover:bg-nav-hover ${NAV_FOCUS}`;
+// Active: baby-blue text with an inset baby-blue underline, so the current page
+// reads by more than hue alone.
+const NAV_ACTIVE = `bg-nav-active text-nav-active-foreground hover:bg-nav-active hover:text-nav-active-foreground dark:hover:bg-nav-active shadow-[inset_0_-2px_0_0_var(--nav-indicator)] ${NAV_FOCUS}`;
+const NAV_IDLE = NAV_BASE;
+const HEADER_OUTLINE = `border-header-foreground/50 bg-transparent text-header-foreground hover:bg-nav-hover hover:text-nav-hover-foreground ${NAV_FOCUS}`;
+
 /** Layout for every signed-in page: shared header plus the routed content. */
 export function AppShell() {
   const { user, logout } = useAuth();
 
   return (
     <div className="bg-background text-foreground min-h-screen">
-      <header className="border-b">
+      <header className="bg-header text-header-foreground border-b">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 p-4">
           <Link to="/" className="flex flex-col">
             <span className="text-xl font-semibold tracking-tight">Khzenty</span>
-            <span className="text-muted-foreground text-xs">
+            <span className="text-header-muted text-xs">
               Organize less. Decide faster. Dress better.
             </span>
           </Link>
@@ -30,8 +42,9 @@ export function AppShell() {
                 {({ isActive }) => (
                   <Button
                     asChild
-                    variant={isActive ? 'secondary' : 'ghost'}
+                    variant="ghost"
                     size="sm"
+                    className={isActive ? NAV_ACTIVE : NAV_IDLE}
                     aria-current={isActive ? 'page' : undefined}
                   >
                     <span>{entry.label}</span>
@@ -39,10 +52,10 @@ export function AppShell() {
                 )}
               </NavLink>
             ))}
-            <span className="text-muted-foreground hidden text-sm sm:inline">
+            <span className="text-header-muted hidden text-sm sm:inline">
               {user?.name ?? user?.email}
             </span>
-            <Button variant="outline" size="sm" onClick={() => void logout()}>
+            <Button variant="outline" size="sm" className={HEADER_OUTLINE} onClick={() => void logout()}>
               Sign out
             </Button>
           </div>

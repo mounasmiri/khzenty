@@ -21,7 +21,7 @@ export class BoardExportError extends Error {
  * Fallback surface colour, used only if the CSS variable cannot be read or the
  * canvas rejects its value. Matches `--garment-surface` in light mode.
  */
-export const FALLBACK_SURFACE = '#f6f6f6';
+export const FALLBACK_SURFACE = '#ffffff';
 
 /**
  * Reads the shared surface token out of the document.

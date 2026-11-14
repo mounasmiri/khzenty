@@ -24,7 +24,7 @@ export function ItemCard({ item, onLaundryChange }: ItemCardProps) {
   const inLaundry = item.laundryStatus === 'IN_LAUNDRY';
 
   return (
-    <div className="flex flex-col gap-2 rounded-lg border p-3">
+    <div className="bg-garment-card flex flex-col gap-2 rounded-lg border p-3">
       <Link
         to={`/items/${item.id}`}
         className="focus-visible:ring-ring hover:bg-accent -m-1 flex flex-col gap-2 rounded-md p-1 transition-colors focus-visible:ring-2 focus-visible:outline-none"
