@@ -9,7 +9,27 @@ import { z } from 'zod';
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().int().positive().default(4000),
-  CLIENT_ORIGIN: z.string().min(1).default('http://localhost:5173'),
+  // The one origin CORS and the CSRF origin check allow. Never `*`: with
+  // credentials the browser would refuse it anyway, and a wildcard here would
+  // mean someone had stopped thinking about it.
+  CLIENT_ORIGIN: z
+    .string()
+    .url()
+    .refine((value) => !value.includes('*'), 'CLIENT_ORIGIN must be one exact origin, not a wildcard')
+    .default('http://localhost:5173'),
+
+  // One-click sign-in to the seeded demo account (POST /api/auth/demo). Off by
+  // default and must be switched on deliberately; when off the routes 404.
+  DEMO_LOGIN_ENABLED: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((value) => value === 'true'),
+
+  // Reverse-proxy hops to trust when reading the client IP (rate limiting,
+  // logs). 0 means none. Set to the real number behind a proxy (1 for a single
+  // load balancer): too high lets a client spoof its IP, too low rate-limits
+  // the proxy instead of the client.
+  TRUST_PROXY: z.coerce.number().int().min(0).max(10).default(0),
 
   // No default: a wrong-but-present database URL is far easier to debug than
   // a silently missing one.
@@ -38,7 +58,35 @@ const envSchema = z.object({
   CLOUDINARY_ALLOWED_FORMATS: z.string().min(1).default('jpg,jpeg,png,webp,avif'),
 });
 
-const parsed = envSchema.safeParse(process.env);
+/**
+ * Rules that only apply in production, where a copied `.env.example` or a
+ * guessable secret would be a real hole rather than a local convenience.
+ */
+const productionChecks = envSchema.superRefine((value, context) => {
+  if (value.NODE_ENV !== 'production') return;
+
+  const placeholder = /replace-me|changeme|change-me|example|secret|password/i.test(value.JWT_SECRET);
+  const lowEntropy = new Set(value.JWT_SECRET).size < 12;
+
+  if (placeholder || lowEntropy) {
+    context.addIssue({
+      code: 'custom',
+      path: ['JWT_SECRET'],
+      message:
+        'JWT_SECRET looks like a placeholder or is too repetitive for production; generate a random one',
+    });
+  }
+
+  if (!value.CLIENT_ORIGIN.startsWith('https://')) {
+    context.addIssue({
+      code: 'custom',
+      path: ['CLIENT_ORIGIN'],
+      message: 'CLIENT_ORIGIN must be an https:// origin in production',
+    });
+  }
+});
+
+const parsed = productionChecks.safeParse(process.env);
 
 if (!parsed.success) {
   const details = parsed.error.issues

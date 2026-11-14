@@ -1,5 +1,7 @@
 # 👗 Khzenty
 
+[![CI](https://github.com/mounasmiri/khzenty/actions/workflows/ci.yml/badge.svg)](https://github.com/mounasmiri/khzenty/actions/workflows/ci.yml)
+
 > Organize less. Decide faster. Dress better.
 
 Khzenty is a modern wardrobe assistant that helps users organize their clothes, create outfits, and simplify daily outfit decisions.
@@ -115,6 +117,8 @@ Then edit `server/.env`:
   node -e "console.log(require('node:crypto').randomBytes(48).toString('base64url'))"
   ```
 
+**Demo login (optional).** Set `DEMO_LOGIN_ENABLED=true` in `server/.env` and run `npm run db:seed` to show a "Try the demo" button on the login page. It signs in as the seeded `demo@khzenty.test` account with no credentials from the client, and is rate limited with login. It defaults to `false`, in which case `POST /api/auth/demo` returns `404`. Enable it only on a demo deployment.
+
 The server validates its environment at boot and exits immediately with a specific message if anything is missing. There is deliberately no fallback `JWT_SECRET`.
 
 **Cloudinary (optional).** Create a free account and an API key that is allowed to upload, then add the three `CLOUDINARY_*` values to `server/.env`. Without them the server still boots and the two upload endpoints return `503`. Never commit `.env`.
@@ -164,6 +168,8 @@ That request goes through the Vite dev proxy to the API, so a JSON response conf
 | POST | `/api/auth/register` | — | Create an account, returns `201` and signs in |
 | POST | `/api/auth/login` | — | Sign in, sets the session cookie |
 | POST | `/api/auth/logout` | — | Clears the cookie, `204` |
+| POST | `/api/auth/demo` | — | Sign in as the seeded demo account, no credentials sent. `404` unless `DEMO_LOGIN_ENABLED=true`; rate limited with login |
+| GET | `/api/auth/demo` | — | `200 { enabled: true }` when demo login is on, `404` when off — lets the login page decide whether to show "Try the demo" |
 | GET | `/api/auth/me` | cookie | The signed-in user |
 | GET | `/api/items` | cookie | The user's garments, favourites first |
 | POST | `/api/items` | cookie | Create a garment |

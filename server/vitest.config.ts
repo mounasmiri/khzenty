@@ -9,6 +9,14 @@ import { TEST_DATABASE_URL } from './tests/test-database-url.js';
  */
 export default defineConfig({
   test: {
+    // The default `forks` pool fails on some machines with "Cannot read
+    // properties of undefined (reading 'config')" before running a single test.
+    // `vmForks` runs the same suite reliably; set here rather than as a CLI flag
+    // so `npm test` behaves the same locally and in CI.
+    pool: 'vmForks',
+    // Argon2 hashing and database round trips make 5 s tight on a busy runner.
+    testTimeout: 15_000,
+    hookTimeout: 30_000,
     globalSetup: ['./tests/global-setup.ts'],
     include: ['tests/**/*.test.ts'],
     // Files share one database, so running them in parallel would let one
