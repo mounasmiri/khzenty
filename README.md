@@ -42,7 +42,7 @@ It runs locally. Deployment, packing lists and statistics are next (see the [Roa
 
 **Planned, roughly in build order**
 
-- Travel packing lists built from saved outfits
+- Travel packing: trips with a packing checklist, weather and pack-for-N-days guidance
 - Wear statistics
 - Deployment
 - Inspiration board
@@ -180,12 +180,28 @@ That request goes through the Vite dev proxy to the API, so a JSON response conf
 | POST | `/api/outfits/:id/wear` | cookie | Mark an outfit as worn; its clean pieces move to the laundry |
 | POST | `/api/wear-log/:id/undo` | cookie | Undo a wearing and restore exactly the pieces it changed |
 | GET | `/api/wear-log` | cookie | The 20 most recent wearings, newest first |
+| GET | `/api/trips` | cookie | The user's trips, soonest first, with day count and packed/total entries |
+| POST | `/api/trips` | cookie | Create a trip: `name`, `destination`, `startDate`, `endDate` (`YYYY-MM-DD`, max 60 days); optional `latitude`/`longitude` from a destination search |
+| GET | `/api/trips/destinations?q=` | cookie | City suggestions with coordinates (server-side Open-Meteo geocoding) |
+| GET | `/api/trips/:id` | cookie | One trip: entries with garment/outfit details and laundry status, plus per-category packing guidance |
+| PATCH | `/api/trips/:id` | cookie | Update a trip; the destination is re-geocoded only if it changed |
+| DELETE | `/api/trips/:id` | cookie | Delete a trip and its entries, `204` |
+| GET | `/api/trips/:id/weather` | cookie | Per-day forecast, or `forecastAvailable: false` with a `reason` |
+| POST | `/api/trips/:id/entries` | cookie | Add a garment or an outfit: exactly one of `clothingItemId` / `outfitId`; `409` if already listed |
+| PATCH | `/api/trips/:id/entries/:entryId` | cookie | Set `{ packed: boolean }` |
+| DELETE | `/api/trips/:id/entries/:entryId` | cookie | Remove an entry, `204` |
 
 **Laundry status is manual** — `CLEAN` or `IN_LAUNDRY`, never inferred, since the app has no way to know a garment is in the wash. `laundryAt` records when the status last changed and only moves when it actually changes, so re-sending the same status doesn't restart the clock on how long something has been in the basket.
 
 The bulk endpoint skips ids that aren't yours rather than rejecting the batch, and returns how many garments actually moved. Filtering on `IN_LAUNDRY` makes it idempotent: a second call matches nothing.
 
 **Outfits.** Every outfit query is scoped by `userId`. An outfit can only contain the caller's own garments: one foreign id refuses the whole request with a `404` and nothing is saved. `itemIds` replaces the whole membership set, and `layout` is a validated, nullable `Json` column.
+
+**Trips.** Scoped by `userId` like everything else; a foreign trip, garment or outfit is a `404`. A trip entry is a garment *or* an outfit (a database `CHECK` enforces exactly one), and the same one cannot be listed twice. Garments in the laundry can always be added — the UI flags them, the API never blocks. An outfit's garments count toward their categories, once each even if also added on their own.
+
+**Weather** comes from Open-Meteo, called only by the server (no API key; the browser never contacts it). Forecasts reach about 16 days ahead; outside that window the endpoint answers `forecastAvailable: false` with `TOO_FAR_AHEAD` or `IN_THE_PAST` rather than inventing data. Results are cached in memory for 45 minutes (failures for 1 minute) and every upstream failure degrades to `SERVICE_UNAVAILABLE`, so the trip page works without it. Geocoding failures are `502`.
+
+**Pack-for-N-days guidance** is the pure `recommendPackingCounts` in `packing-guidance.service.ts`; every number is in its `PACKING_RULES` object. Tops ≈ 1/day (max 7); bottoms 1 per 2.5 days (1–4); footwear 2 up to 5 days, else 3; underwear 1/day + 1 spare (max 8). With a forecast: outerwear 1 below 15°C minimum, 2 below 5°C, +1 if rain is likely (max 3); one warm accessory below 5°C. It is guidance only — nothing enforces it.
 
 **Wearing an outfit** sets every piece that is currently `CLEAN` to `IN_LAUNDRY` in one transaction and records which ones it changed, so undo restores exactly those. Deleting an outfit also deletes its wear entries.
 

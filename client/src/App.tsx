@@ -16,6 +16,10 @@ import { OutfitsPage } from '@/pages/outfits-page';
 import { QuickAddPage } from '@/pages/quick-add-page';
 import { QuickSortPage } from '@/pages/quick-sort-page';
 import { RegisterPage } from '@/pages/register-page';
+import { TripDetailPage } from '@/pages/trip-detail-page';
+import { TripEditPage } from '@/pages/trip-edit-page';
+import { TripNewPage } from '@/pages/trip-new-page';
+import { TripsPage } from '@/pages/trips-page';
 import { WardrobePage } from '@/pages/wardrobe-page';
 
 /**
@@ -66,6 +70,11 @@ function App() {
           {/* Declared before /outfits/:id/edit so the literal segment wins. */}
           <Route path="/outfits/new" element={<OutfitNewPage />} />
           <Route path="/outfits/:id/edit" element={<OutfitEditPage />} />
+          <Route path="/trips" element={<TripsPage />} />
+          {/* Declared before /trips/:id so the literal segment wins. */}
+          <Route path="/trips/new" element={<TripNewPage />} />
+          <Route path="/trips/:id" element={<TripDetailPage />} />
+          <Route path="/trips/:id/edit" element={<TripEditPage />} />
           <Route path="/items/:id" element={<ItemDetailPage />} />
           <Route path="/items/:id/edit" element={<ItemEditPage />} />
         </Route>

@@ -5,6 +5,7 @@ import { clothingItemRouter } from './clothing-item.routes.js';
 import { healthRouter } from './health.routes.js';
 import { outfitRouter } from './outfit.routes.js';
 import { taxonomyRouter } from './taxonomy.routes.js';
+import { tripRouter } from './trip.routes.js';
 import { uploadRouter } from './upload.routes.js';
 import { wearLogRouter } from './wear-log.routes.js';
 
@@ -18,5 +19,6 @@ apiRouter.use('/auth', authRouter);
 apiRouter.use('/items', clothingItemRouter);
 apiRouter.use('/outfits', outfitRouter);
 apiRouter.use('/taxonomy', taxonomyRouter);
+apiRouter.use('/trips', tripRouter);
 apiRouter.use('/uploads', uploadRouter);
 apiRouter.use('/wear-log', wearLogRouter);
