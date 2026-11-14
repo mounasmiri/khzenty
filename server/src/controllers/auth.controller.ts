@@ -1,20 +1,10 @@
 import type { RequestHandler } from 'express';
 
 import { clearSessionCookie, setSessionCookie } from '../lib/cookies.js';
-import { isDemoEmail } from '../lib/demo.js';
 import { HttpError } from '../lib/http-error.js';
 import { signSessionToken } from '../lib/jwt.js';
-import { login, loginAsDemo, register } from '../services/auth.service.js';
-import type { PublicUser } from '../types/auth.js';
-
-/**
- * Adds `isDemo` so the client can show a "changes may be reset" note. Derived
- * from the email on every response that returns a user, so it is never stale
- * and never something a client could set.
- */
-function withDemoFlag(user: PublicUser) {
-  return { ...user, isDemo: isDemoEmail(user.email) };
-}
+import { login, register } from '../services/auth.service.js';
+import { createDemoSession } from '../services/demo-session.service.js';
 
 /**
  * Registering signs the user in immediately — there is no email verification
@@ -24,22 +14,25 @@ export const postRegister: RequestHandler = async (req, res) => {
   const user = await register(req.body);
 
   setSessionCookie(res, signSessionToken(user.id));
-  res.status(201).json({ user: withDemoFlag(user) });
+  res.status(201).json({ user });
 };
 
 export const postLogin: RequestHandler = async (req, res) => {
   const user = await login(req.body);
 
   setSessionCookie(res, signSessionToken(user.id));
-  res.status(200).json({ user: withDemoFlag(user) });
+  res.status(200).json({ user });
 };
 
-/** Same cookie and session as `postLogin`; the request body is ignored. */
+/**
+ * Gives the visitor a private, temporary copy of the demo account and signs
+ * them into it with the normal cookie session. The request body is ignored.
+ */
 export const postDemoLogin: RequestHandler = async (_req, res) => {
-  const user = await loginAsDemo();
+  const user = await createDemoSession();
 
   setSessionCookie(res, signSessionToken(user.id));
-  res.status(200).json({ user: withDemoFlag(user) });
+  res.status(200).json({ user });
 };
 
 /**
@@ -64,5 +57,5 @@ export const getMe: RequestHandler = (req, res) => {
     throw new HttpError(401, 'Authentication required');
   }
 
-  res.status(200).json({ user: withDemoFlag(req.user) });
+  res.status(200).json({ user: req.user });
 };

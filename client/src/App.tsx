@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { Navigate, Route, Routes } from 'react-router';
 
 import { AppShell } from '@/components/app-shell';
+import { NotInDemo } from '@/features/auth/not-in-demo';
 import { ProtectedRoute } from '@/features/auth/protected-route';
 import { useAuth } from '@/features/auth/use-auth';
 import { ItemDetailPage } from '@/pages/item-detail-page';
@@ -62,8 +63,22 @@ function App() {
           <Route path="/" element={<WardrobePage />} />
           <Route path="/items/new" element={<ItemNewPage />} />
           {/* Declared before /items/:id so the literal segments win. */}
-          <Route path="/items/quick-add" element={<QuickAddPage />} />
-          <Route path="/items/bulk-add" element={<BulkAddPage />} />
+          <Route
+            path="/items/quick-add"
+            element={
+              <NotInDemo>
+                <QuickAddPage />
+              </NotInDemo>
+            }
+          />
+          <Route
+            path="/items/bulk-add"
+            element={
+              <NotInDemo>
+                <BulkAddPage />
+              </NotInDemo>
+            }
+          />
           <Route path="/items/sort" element={<QuickSortPage />} />
           <Route path="/laundry" element={<LaundryPage />} />
           <Route path="/outfits" element={<OutfitsPage />} />

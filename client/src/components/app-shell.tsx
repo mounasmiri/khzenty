@@ -67,7 +67,7 @@ export function AppShell() {
 
       {user?.isDemo ? (
         <p role="note" className="bg-muted text-muted-foreground px-4 py-1.5 text-center text-xs">
-          Demo account: changes may be reset.
+          Demo: your changes are private and deleted after 24 hours.
         </p>
       ) : null}
 

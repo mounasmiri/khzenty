@@ -117,7 +117,7 @@ Then edit `server/.env`:
   node -e "console.log(require('node:crypto').randomBytes(48).toString('base64url'))"
   ```
 
-**Demo login (optional).** Set `DEMO_LOGIN_ENABLED=true` in `server/.env` and run `npm run db:seed` to show a "Try the demo" button on the login page. It signs in as the seeded `demo@khzenty.test` account with no credentials from the client, and is rate limited with login. It defaults to `false`, in which case `POST /api/auth/demo` returns `404`. Enable it only on a demo deployment.
+**Demo sandbox (optional).** Set `DEMO_LOGIN_ENABLED=true` in `server/.env` and run `npm run db:seed` to show a "Try the demo" button on the login page. Each click gives the visitor a **private, temporary copy** of the seeded `demo@khzenty.test` account (garments, outfits, trips, wear log) and signs them into it, so one visitor's changes are never seen by another. Copies share the template's photos by reference, cannot upload new ones (`403`), and are deleted after 24 hours; at most `DEMO_MAX_USERS` (default 200) exist at once, after which sign-in answers `503`. The template itself is never signed into; `npm run db:seed` is how you refresh it. It defaults to `false`, in which case `POST /api/auth/demo` returns `404`. Enable it only on a demo deployment.
 
 The server validates its environment at boot and exits immediately with a specific message if anything is missing. There is deliberately no fallback `JWT_SECRET`.
 
@@ -168,7 +168,7 @@ That request goes through the Vite dev proxy to the API, so a JSON response conf
 | POST | `/api/auth/register` | — | Create an account, returns `201` and signs in |
 | POST | `/api/auth/login` | — | Sign in, sets the session cookie |
 | POST | `/api/auth/logout` | — | Clears the cookie, `204` |
-| POST | `/api/auth/demo` | — | Sign in as the seeded demo account, no credentials sent. `404` unless `DEMO_LOGIN_ENABLED=true`; rate limited with login |
+| POST | `/api/auth/demo` | — | Create a private demo copy of the seeded account and sign in as it; no credentials sent. `404` unless `DEMO_LOGIN_ENABLED=true`, `503` when the cap is reached; rate limited with login |
 | GET | `/api/auth/demo` | — | `200 { enabled: true }` when demo login is on, `404` when off — lets the login page decide whether to show "Try the demo" |
 | GET | `/api/auth/me` | cookie | The signed-in user |
 | GET | `/api/items` | cookie | The user's garments, favourites first |

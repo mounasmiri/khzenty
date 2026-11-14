@@ -1,6 +1,7 @@
 import { Router } from 'express';
 
 import { postUploadSignature } from '../controllers/upload.controller.js';
+import { forbidDemoUsers } from '../middlewares/forbid-demo.middleware.js';
 import { requireAuth } from '../middlewares/auth.middleware.js';
 
 export const uploadRouter: Router = Router();
@@ -9,4 +10,5 @@ export const uploadRouter: Router = Router();
 // since the folder it authorises is derived from the caller's id.
 uploadRouter.use(requireAuth);
 
-uploadRouter.post('/signature', postUploadSignature);
+// Demo copies never upload (see `forbidDemoUsers`).
+uploadRouter.post('/signature', forbidDemoUsers, postUploadSignature);
