@@ -9,8 +9,11 @@ export interface HealthStatus {
   timestamp?: string;
 }
 
-/** Long enough for a busy pool, short enough that a probe is not left hanging. */
-const DB_CHECK_TIMEOUT_MS = 3000;
+/**
+ * Long enough for a serverless database to wake (a cold Neon compute), short
+ * enough to answer inside a platform health check's own 5 s limit.
+ */
+const DB_CHECK_TIMEOUT_MS = 4000;
 
 async function databaseReachable(): Promise<boolean> {
   try {

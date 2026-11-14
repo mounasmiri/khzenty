@@ -1,0 +1,74 @@
+# Render Blueprint for the Khzenty API (free plan).
+#
+# The web app lives on Vercel and reaches this service through a Vercel rewrite
+# (see client/vercel.json), so browsers only ever talk to the Vercel origin and
+# the session cookie stays same-origin. Step-by-step in README.md → Deployment.
+#
+# Secrets use `sync: false`: Render asks for them when the Blueprint is first
+# applied and never stores them in this file.
+
+services:
+  - type: web
+    name: khzenty-api
+    runtime: node
+    plan: free
+    # Pick the region closest to your Neon project; the two should match.
+    # region: frankfurt
+    rootDir: server
+
+    # `--include=dev`: Render sets NODE_ENV=production during the build too, and
+    # with that npm skips devDependencies — but TypeScript and the Prisma CLI,
+    # both needed to build and migrate, are devDependencies.
+    buildCommand: npm ci --include=dev && npx prisma generate && npm run build
+
+    # Migrations run on every start. They are idempotent, quick when there is
+    # nothing to apply, and use DIRECT_URL (see prisma.config.ts). The demo data
+    # is NOT seeded here — that is a manual step.
+    startCommand: npx prisma migrate deploy && node dist/server.js
+
+    healthCheckPath: /api/health
+
+    envVars:
+      - key: NODE_VERSION
+        value: 24.16.0
+      - key: NODE_ENV
+        value: production
+
+      # Neon, pooled ("-pooler") connection string. Used by the running server.
+      - key: DATABASE_URL
+        sync: false
+      # Neon, direct (non-pooled) connection string. Used only by
+      # `prisma migrate deploy`, which needs a session-level advisory lock that
+      # the pooler cannot provide.
+      - key: DIRECT_URL
+        sync: false
+
+      # Generate with:
+      #   node -e "console.log(require('node:crypto').randomBytes(48).toString('base64url'))"
+      - key: JWT_SECRET
+        sync: false
+
+      # Exactly your Vercel production origin, e.g. https://khzenty.vercel.app
+      # (https, no trailing path). Writes from any other origin are refused.
+      - key: CLIENT_ORIGIN
+        sync: false
+
+      # Proxy hops in front of the app: Vercel's rewrite, then Render's load
+      # balancer. This is what makes rate limiting see each visitor instead of
+      # Vercel's address. See README → Deployment before changing it.
+      - key: TRUST_PROXY
+        value: "2"
+
+      - key: DEMO_LOGIN_ENABLED
+        value: "true"
+      - key: DEMO_MAX_USERS
+        value: "200"
+
+      # Optional: only needed for signed-in (non-demo) users to upload photos.
+      # Remove these three entries to run without uploads.
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
