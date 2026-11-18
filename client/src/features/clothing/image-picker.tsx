@@ -181,7 +181,7 @@ export function ImagePicker({
           className="size-24 shrink-0 rounded-md border"
         />
 
-        <div className="flex flex-col items-start gap-2">
+        <div className="flex min-w-0 max-w-full flex-col items-start gap-2">
           <input
             ref={inputRef}
             id="photo"
@@ -189,7 +189,7 @@ export function ImagePicker({
             accept="image/*"
             disabled={disabled}
             onChange={handleChange}
-            className="text-sm file:mr-3 file:rounded-md file:border file:bg-background file:px-3 file:py-1.5 file:text-sm"
+            className="max-w-full text-sm file:mr-3 file:rounded-md file:border file:bg-background file:px-3 file:py-1.5 file:text-sm"
           />
 
           {file ? (

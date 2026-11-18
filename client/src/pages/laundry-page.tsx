@@ -60,7 +60,7 @@ export function LaundryPage() {
 
   return (
     <section className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-col items-start gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Laundry basket</h1>
           <p className="text-muted-foreground mt-1 text-sm">
@@ -71,7 +71,11 @@ export function LaundryPage() {
         </div>
 
         {dirty.length > 0 ? (
-          <Button disabled={busy} onClick={() => void wash(dirty.map((item) => item.id))}>
+          <Button
+            className="h-11 sm:h-8"
+            disabled={busy}
+            onClick={() => void wash(dirty.map((item) => item.id))}
+          >
             {busy ? 'Washing…' : 'Mark all as washed'}
           </Button>
         ) : null}

@@ -29,36 +29,49 @@ export function AppShell() {
   return (
     <div className="bg-background text-foreground min-h-screen">
       <header className="bg-header text-header-foreground border-b">
-        {/* flex-wrap: with four nav entries the row no longer fits a phone, so
-            the nav drops under the logo instead of overflowing the page. */}
+        {/* Under 640px: brand and Sign out share the first row, the nav is one
+            compact row beneath (scrolling sideways if it ever outgrows the
+            screen). From 640px up the group is a plain flex row again, exactly
+            as before. `contents` / `order` reflow the same elements rather than
+            duplicating them. */}
         <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-x-4 gap-y-2 p-4">
           <Link to="/" className="flex flex-col">
             <span className="text-xl font-semibold tracking-tight">Khzenty</span>
-            <span className="text-header-muted text-xs">
+            <span className="text-header-muted hidden text-xs sm:block">
               Organize less. Decide faster. Dress better.
             </span>
           </Link>
 
-          <div className="flex flex-wrap items-center gap-3">
-            {NAV.map((entry) => (
-              <NavLink key={entry.to} to={entry.to} end={entry.end}>
-                {({ isActive }) => (
-                  <Button
-                    asChild
-                    variant="ghost"
-                    size="sm"
-                    className={isActive ? NAV_ACTIVE : NAV_IDLE}
-                    aria-current={isActive ? 'page' : undefined}
-                  >
-                    <span>{entry.label}</span>
-                  </Button>
-                )}
-              </NavLink>
-            ))}
+          <div className="contents sm:flex sm:flex-wrap sm:items-center sm:gap-3">
+            <nav
+              aria-label="Main"
+              className="order-3 -my-1 flex w-full gap-1 overflow-x-auto py-1 [scrollbar-width:none] sm:contents [&::-webkit-scrollbar]:hidden"
+            >
+              {NAV.map((entry) => (
+                <NavLink key={entry.to} to={entry.to} end={entry.end} className="shrink-0">
+                  {({ isActive }) => (
+                    <Button
+                      asChild
+                      variant="ghost"
+                      size="sm"
+                      className={`h-9 sm:h-7 ${isActive ? NAV_ACTIVE : NAV_IDLE}`}
+                      aria-current={isActive ? 'page' : undefined}
+                    >
+                      <span>{entry.label}</span>
+                    </Button>
+                  )}
+                </NavLink>
+              ))}
+            </nav>
             <span className="text-header-muted hidden text-sm sm:inline">
               {user?.name ?? user?.email}
             </span>
-            <Button variant="outline" size="sm" className={HEADER_OUTLINE} onClick={() => void logout()}>
+            <Button
+              variant="outline"
+              size="sm"
+              className={`order-2 h-9 sm:order-none sm:h-7 ${HEADER_OUTLINE}`}
+              onClick={() => void logout()}
+            >
               Sign out
             </Button>
           </div>
@@ -66,7 +79,7 @@ export function AppShell() {
       </header>
 
       {user?.isDemo ? (
-        <p role="note" className="bg-muted text-muted-foreground px-4 py-1.5 text-center text-xs">
+        <p role="note" className="bg-muted text-muted-foreground px-4 py-1.5 text-center text-xs text-balance">
           Demo: your changes are private and deleted after 24 hours.
         </p>
       ) : null}

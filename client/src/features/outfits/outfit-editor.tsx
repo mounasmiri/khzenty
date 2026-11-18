@@ -238,8 +238,8 @@ export function OutfitEditor({ items, zones, outfit }: OutfitEditorProps) {
       {/* Mobile-first: the board sits above the picker in one column, and the
           two sit side by side only once there is room. The board is sticky on
           the wide layout so it stays visible while the picker scrolls. */}
-      <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
-        <div className="space-y-4 lg:sticky lg:top-4">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:items-start">
+        <div className="min-w-0 space-y-4 lg:sticky lg:top-4">
           <OutfitBoard garments={garments} zones={zones} layout={layout} />
 
           <p className="text-muted-foreground text-xs">
