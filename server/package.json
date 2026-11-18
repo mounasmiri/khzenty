@@ -19,6 +19,7 @@
     "db:deploy": "prisma migrate deploy",
     "db:seed": "prisma db seed",
     "db:export-demo-photos": "tsx prisma/export-demo-photos.ts",
+    "db:export-demo": "tsx prisma/export-demo.ts",
     "db:studio": "prisma studio",
     "postinstall": "prisma generate"
   },

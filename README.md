@@ -294,23 +294,31 @@ Migrations run on every start (idempotent, and quick when there is nothing to ap
 Seeding is **manual, never part of a deploy**. The demo sandbox clones one template account (`demo@khzenty.test`); this is how it is created and refreshed.
 
 ```bash
-# 1. Once, from your development machine: export the template's photo links.
+# 1. Once, from your development machine: export the local demo account.
 cd server
-npm run db:export-demo-photos          # writes prisma/demo-photos.json (git-ignored)
+npm run db:export-demo                 # writes prisma/demo-export.json (git-ignored)
 
 # 2. Seed Neon. Use the DIRECT url. JWT_SECRET only has to be any 32+ characters here.
 DATABASE_URL='postgresql://…direct…?sslmode=require' \
 JWT_SECRET='any-placeholder-of-at-least-32-characters' \
 SEED_ALLOW_PRODUCTION=true \
-SEED_PHOTOS_FILE=default \
+SEED_DEMO_FILE=default \
 npm run db:seed
 ```
+
+`db:export-demo` reads `demo@khzenty.test` from your local database (garments with their photo links, outfits with their board layouts, trips with entries and manual counts, the wear log, laundry state) and writes it to `server/prisma/demo-export.json`. It is read-only. With `SEED_DEMO_FILE=default` (or a path) the seed builds the template from that file instead of the built-in sample data; without it, nothing changes.
+
+- **Dates are relative.** The file holds "5 days from today" and "3 days ago", never calendar dates, and the seed resolves them against the moment it runs. That is what the per-visitor copy expects, so the Dubai trip is still inside the forecast window however old the file is.
+- **The file is validated before anything is deleted.** A malformed file, a photo that is not a Cloudinary `https` link, a garment whose category does not match its type, or a reference to something not in the file stops the run with the template untouched.
+- **It holds no account data**: no email, password hash or timestamps. The file is git-ignored, and photos are links to Cloudinary, not files.
+- **Re-export after changing the dev account**, then re-run step 2.
+- `db:export-demo-photos` / `SEED_PHOTOS_FILE` still work for the built-in sample data. With a demo file they only fill in a link the file lacks.
 
 On Windows PowerShell set each variable first, e.g. `$env:SEED_ALLOW_PRODUCTION='true'`.
 
 - It refuses to run against anything that is not a local database unless `SEED_ALLOW_PRODUCTION=true` is spelled exactly, whatever `NODE_ENV` says.
 - In that mode it touches **only** the demo template: no dev accounts, other users' rows are never read or deleted, and the template gets an unusable password (the development password is public, and anyone who could sign in could edit what every demo copy is cloned from).
-- It is idempotent. Photo links already on the template are kept; `SEED_PHOTOS_FILE` only fills in missing ones, and the photos themselves stay in Cloudinary untouched.
+- It is idempotent. Photo links already on the template are kept (they win over the file's); `SEED_PHOTOS_FILE` only fills in missing ones, and the photos themselves stay in Cloudinary untouched.
 - **To refresh the demo** (new sample data, a new seed date), run the same command again. Existing visitor copies are unaffected and expire after 24 hours; new copies get the refreshed template. The template is absent for about a second while it is rebuilt, during which demo sign-in answers `404`, so run it when it is quiet.
 
 ### First test
@@ -345,6 +353,7 @@ Run from the repo root:
 | `npm run db:generate` | Regenerate the Prisma client |
 | `npm run db:migrate` | Create and apply a migration |
 | `npm run db:seed` | Load development data (idempotent). Refuses non-local databases unless `SEED_ALLOW_PRODUCTION=true` — see Deployment |
+| `npm run db:export-demo` | (in `server/`) Write the local demo account to `prisma/demo-export.json` (git-ignored); seed it with `SEED_DEMO_FILE=default` |
 | `npm run db:export-demo-photos` | (in `server/`) Write the demo template's photo links to a git-ignored JSON file |
 | `npm run db:studio` | Open Prisma Studio |
 

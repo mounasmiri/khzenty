@@ -5,7 +5,9 @@
  * Cascade` on their relations clears their garments and outfits. Re-running
  * produces identical state without touching rows you added by hand.
  *
- * Run with `npm run db:seed`.
+ * Run with `npm run db:seed`. With `SEED_DEMO_FILE=default` (or a path) the demo
+ * template is built from a file written by `npm run db:export-demo` instead of
+ * the built-in sample data below; the same safeguards apply.
  *
  * The demo account is a full showcase: 29 garments, 10 outfits, two trips and
  * a short wear history, so every screen has something realistic to show.
@@ -24,6 +26,7 @@ import {
   Occasion,
   Season,
 } from '../src/generated/prisma/enums.js';
+import { DEFAULT_DEMO_FILE, importDemoExport, readDemoExport } from './demo-export.js';
 import { DEFAULT_PHOTOS_FILE, readPhotosFile } from './demo-photos.js';
 import { decideSeedMode } from './seed-target.js';
 import {
@@ -137,6 +140,19 @@ async function main(): Promise<void> {
 
   console.log(`[seed] Mode: ${mode}${production ? ' (demo template only)' : ''}`);
 
+  // Optionally build the template from a file exported from the dev database
+  // (`npm run db:export-demo`) instead of the built-in sample data. Read and
+  // validated BEFORE anything is deleted, so a bad file cannot wipe the template.
+  const demoFile = process.env['SEED_DEMO_FILE'];
+  const demo = demoFile ? await readDemoExport(demoFile === 'default' ? DEFAULT_DEMO_FILE : demoFile) : null;
+
+  if (demo) {
+    console.log(
+      `[seed] Demo data from file: ${demo.items.length} garments, ${demo.outfits.length} outfits, ` +
+        `${demo.wears.length} wear entries, ${demo.trips.length} trips`,
+    );
+  }
+
   // Read before the delete below, which cascades to the garments and would
   // otherwise drop the only record of where each photo lives in Cloudinary.
   const kept = await prisma.clothingItem.findMany({
@@ -166,7 +182,7 @@ async function main(): Promise<void> {
     console.log(`[seed] Photo links from file: ${fromFile.size} (${added} new, ${fromFile.size - added} already present)`);
   }
 
-  const seededIds = new Set(DEMO_ITEMS.map((item) => item.id));
+  const seededIds = new Set<string>(demo ? demo.items.map((item) => item.id) : DEMO_ITEMS.map((item) => item.id as string));
   const orphaned = kept.filter((row) => !seededIds.has(row.id));
 
   if (orphaned.length > 0) {
@@ -187,7 +203,10 @@ async function main(): Promise<void> {
     console.log(`[seed] Removed ${count} previously seeded user(s).`);
   }
 
-  const demoId = await seedDemoTemplate(photos, production ? UNUSABLE_PASSWORD_HASH : undefined);
+  const passwordHash = production ? UNUSABLE_PASSWORD_HASH : undefined;
+  const demoId = demo
+    ? await importDemoExport(demo, { photos, passwordHash })
+    : await seedDemoTemplate(photos, passwordHash);
 
   if (!production) {
     await seedUser(SECOND_EMAIL, 'Second User', SECOND_ITEMS, SECOND_OUTFITS);
