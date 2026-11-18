@@ -86,7 +86,7 @@ export function OutfitsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-col items-start gap-3 sm:flex-row sm:justify-between sm:gap-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Outfits</h1>
           <p className="text-muted-foreground text-sm">
@@ -96,11 +96,11 @@ export function OutfitsPage() {
           </p>
         </div>
 
-        <div className="flex flex-wrap justify-end gap-2">
-          <Button variant="outline" size="sm" onClick={suggest}>
+        <div className="flex flex-wrap gap-2 sm:justify-end">
+          <Button variant="outline" size="sm" className="h-11 sm:h-7" onClick={suggest}>
             What should I wear today?
           </Button>
-          <Button asChild size="sm">
+          <Button asChild size="sm" className="h-11 sm:h-7">
             <Link to="/outfits/new">Build one</Link>
           </Button>
         </div>
