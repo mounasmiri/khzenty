@@ -18,6 +18,12 @@ export default defineConfig({
   },
   test: {
     environment: 'node',
+    // The default `forks` pool intermittently fails on some machines with
+    // "Cannot read properties of undefined (reading 'config')" before running
+    // any test (the server suite hit the same). `vmForks` is reliable, and is
+    // set here rather than as a CLI flag so `npm test` behaves the same
+    // everywhere.
+    pool: 'vmForks',
     testTimeout: 15_000,
     include: ['src/**/*.test.ts'],
   },

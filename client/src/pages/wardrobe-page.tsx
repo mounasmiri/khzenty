@@ -81,7 +81,9 @@ export function WardrobePage() {
 
   return (
     <section className="flex flex-col gap-6">
-      <div className="flex items-center justify-between gap-4">
+      {/* Under 640px the title stacks above the actions; from there up it is the
+          same single row as before. Buttons are 44px tall on touch screens. */}
+      <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
         <h1 className="text-2xl font-semibold tracking-tight">
           Your wardrobe
           {items ? (
@@ -95,15 +97,22 @@ export function WardrobePage() {
           {/* Both exist to upload photos, which the demo sandbox does not allow. */}
           {user?.isDemo ? null : (
             <>
-              <Button asChild>
+              <Button asChild className="h-11 sm:h-8">
                 <Link to="/items/quick-add">Quick add</Link>
               </Button>
-              <Button asChild variant="outline">
+              <Button asChild variant="outline" className="h-11 sm:h-8">
                 <Link to="/items/bulk-add">Bulk add</Link>
               </Button>
             </>
           )}
-          <Button asChild variant="ghost">
+          <Button
+            asChild
+            variant="ghost"
+            // Alone in the demo view, a bare text link under the title looks
+            // unfinished on a phone, so it takes an outline look there. Desktop
+            // keeps the ghost button it always had.
+            className={`h-11 sm:h-8 ${user?.isDemo ? "max-sm:border-secondary-border max-sm:bg-background" : ""}`}
+          >
             <Link to="/items/new">Full form</Link>
           </Button>
         </div>

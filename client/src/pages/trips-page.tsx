@@ -34,7 +34,7 @@ export function TripsPage() {
         {/* The empty state carries its own primary button, so the page never
             shows two. */}
         {trips.length > 0 ? (
-          <Button asChild size="sm">
+          <Button asChild size="sm" className="h-11 sm:h-7">
             <Link to="/trips/new">New trip</Link>
           </Button>
         ) : null}

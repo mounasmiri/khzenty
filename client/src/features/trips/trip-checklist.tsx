@@ -66,7 +66,10 @@ export function TripChecklist({ entries, busyIds, onTogglePacked, onRemove }: Tr
               const thumbs: OutfitGarment[] = entry.item ? [entry.item] : (entry.outfit?.items ?? []);
 
               return (
-                <li key={entry.id} className="flex items-center gap-3 px-3 py-2">
+                <li
+                  key={entry.id}
+                  className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2 sm:flex-nowrap"
+                >
                   <input
                     type="checkbox"
                     checked={entry.packed}
@@ -91,7 +94,7 @@ export function TripChecklist({ entries, busyIds, onTogglePacked, onRemove }: Tr
                     ))}
                   </div>
 
-                  <div className="min-w-0 flex-1">
+                  <div className="min-w-[7rem] flex-1 sm:min-w-0">
                     <p
                       className={`truncate text-sm font-medium ${
                         entry.packed ? 'text-muted-foreground line-through' : ''
