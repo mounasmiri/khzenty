@@ -1,57 +1,103 @@
-# 👗 Khzenty
-
-[![CI](https://github.com/mounasmiri/khzenty/actions/workflows/ci.yml/badge.svg)](https://github.com/mounasmiri/khzenty/actions/workflows/ci.yml)
+# Khzenty
 
 > Organize less. Decide faster. Dress better.
 
-Khzenty is a modern wardrobe assistant that helps users organize their clothes, create outfits, and simplify daily outfit decisions.
+[![CI](https://github.com/mounasmiri/khzenty/actions/workflows/ci.yml/badge.svg)](https://github.com/mounasmiri/khzenty/actions/workflows/ci.yml)
+[![License: AGPL-3.0-or-later](https://img.shields.io/badge/license-AGPL--3.0--or--later-blue.svg)](LICENSE)
 
-Built as a portfolio project using a modern full-stack architecture and developed with production-quality practices.
+### [Live demo: khzenty.vercel.app](https://khzenty.vercel.app)
 
-## 📌 Status
+Tap **Try the demo**. No signup: you get a private copy that is deleted after 24 hours.
 
-**MVP v1.0.** The core loop works end to end: add clothes with photos, turn them into uniform cutouts, build outfits on a board, wear them, and track what is in the laundry.
+> **Cold start.** The app runs on free hosting. The first load after a quiet period can take 30–60 seconds while the API wakes up; reloading after a minute works.
 
-It runs locally. Deployment, packing lists and statistics are next (see the [Roadmap](#️-roadmap)).
+Most people wear a fraction of what they own, because they cannot remember the rest. Khzenty is a wardrobe assistant for rediscovering the clothes you already have: photograph them once, turn them into clean cutouts, combine them into outfits on a board, log what you wear, and plan what to pack for a trip. It is not a shopping app and not a social network.
 
-## 📸 Screenshots
+## Screenshots
 
-<!-- TODO: add three images to docs/screenshots/ with these names -->
-<p align="center">
-  <img src="docs/screenshots/wardrobe.png" alt="Wardrobe grid" width="31%" />
-  <img src="docs/screenshots/outfit-board.png" alt="Outfit board" width="31%" />
-  <img src="docs/screenshots/laundry.png" alt="Laundry basket" width="31%" />
-</p>
+| | |
+|:---:|:---:|
+| ![Wardrobe grid](docs/screenshots/wardrobe.png) | ![Outfit builder](docs/screenshots/Outfitbuilder.png) |
+| **Wardrobe**: photo cutouts, filters, favourites | **Outfit builder**: pick pieces, get an automatic layout |
+| ![Saved outfits](docs/screenshots/Outfitslist.png) | ![Trip detail](docs/screenshots/Trip-detail.png) |
+| **Outfits**: saved boards, worn today | **Trip**: packing list, forecast, pack-for-N-days guidance |
+| ![Laundry basket](docs/screenshots/Laundry.png) | ![Add an item](docs/screenshots/addanitem.png) |
+| **Laundry**: what is in the basket | **Add an item**: photo, type, season |
+| ![Login page](docs/screenshots/Login.png) | |
+| **Login**: with the "Try the demo" button | |
 
-## ✨ Features
+## Features
 
-**Built**
-
-- Email and password accounts, with Argon2id hashing
-- httpOnly cookie sessions and a protected-route wrapper
-- Wardrobe data model: garments, outfits, wear log, and the joins between them
-- Garment CRUD, scoped per user, with the category derived from the type
-- Season tagging and favourites (which sort to the top of the grid)
-- Delete confirmation that names how many outfits the garment will leave
-- **Photos:** signed direct-to-Cloudinary uploads, replace, remove, and the stored asset is destroyed when a garment is deleted
-- **Fast capture:** quick add (camera on mobile), bulk add with limited concurrency, and a quick-sort screen. Colour is optional, so photo-only drafts show an "Unsorted" badge
-- **Background removal:** optional, in the browser, with a before/after preview, edge cleanup, and transparency preserved end to end
-- **Laundry:** a Clean / In laundry toggle, a laundry basket, and filter counts
-- **Outfit board:** pick garments by category, get an automatic layout (top, bottom, shoes, bag, accessories), save with occasions, and export the board as a PNG
-- **Wear log:** "Worn today" with undo, and a Recently worn list
+- **Wardrobe** with photo cutouts: optional background removal that runs in the browser, with a before/after preview
+- **Fast capture**: quick add (camera on mobile), bulk add, and a quick-sort screen for photo-only drafts
+- **Laundry tracking**: a manual Clean / In laundry status, a laundry basket and "mark as washed"
+- **Outfit builder**: boards laid out automatically (top, bottom, shoes, bag, accessories), saved with occasions, exportable as a PNG
+- **Wear log with undo**: "Worn today" moves the clean pieces to the laundry, and undo restores exactly what it changed
 - **What should I wear today?** picks a saved outfit whose pieces are all clean
-- Automated tests (server and client) and CI
+- **Travel packing**: trips with a checklist, a per-day weather forecast, and pack-for-N-days guidance per category
+- **Per-visitor private demo sandbox**: every demo visitor gets their own temporary copy of a sample account
 
-**Planned, roughly in build order**
+## Architecture
 
-- Travel packing: trips with a packing checklist, weather and pack-for-N-days guidance
-- Wear statistics
-- Deployment
-- Inspiration board
+```mermaid
+flowchart LR
+    B[Browser]
+    V["React + Vite client<br/>Vercel"]
+    R["Express API<br/>Render"]
+    P[Prisma]
+    N[("Neon Postgres")]
+    C[Cloudinary]
+    O[Open-Meteo]
+
+    B --> V
+    V -- "/api/* rewrite" --> R
+    R --> P --> N
+    B -. "signed direct upload" .-> C
+    R -. "signature, size check" .-> C
+    R -- "forecast, geocoding" --> O
+```
+
+The browser only talks to the Vercel origin. Vercel serves the client and rewrites `/api/*` to the Express API, so the session cookie is same-origin and there is no CORS. Image bytes go from the browser straight to Cloudinary, and only the server calls Open-Meteo.
+
+**Backend layering:** Route → Controller → Service → Prisma. Routes are the HTTP surface, controllers are thin (read the request, delegate, shape the response), services hold the business logic and know nothing about `req`/`res`, and Prisma is the only code that touches the database. See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the data model and sequence diagrams.
+
+## Key decisions and trade-offs
+
+- **Rule-based guidance, not AI, by design.** Pack-for-N-days is a pure function with every number in one `PACKING_RULES` object. It is deterministic, unit-testable and explainable. The trade-off is that it is simple: it counts items per category and does not understand style. AI suggestions are on the roadmap.
+- **Direct-to-Cloudinary signed uploads.** The API only issues a short-lived signature covering the folder and allowed formats, so image bytes never pass through the server (no multipart handling, no upload bandwidth). Cloudinary cannot sign a maximum size, so the server re-reads the real size and format afterwards and deletes violations.
+- **Cookie sessions behind a same-origin proxy.** An `httpOnly` cookie keeps the token out of JavaScript, and the Vercel rewrite avoids CORS. The trade-off is that sessions are stateless JWTs, so sign-out does not revoke a copied token (a known limit, see [SECURITY.md](SECURITY.md)), and only the production origin can write.
+- **Per-visitor demo copies.** Each demo click clones a template account into a private, temporary user, so visitors never see each other's changes. The cost is clean-up: copies expire after 24 hours, are capped, and borrow the template's photos by reference (they cannot upload).
+- **Background removal in the browser.** It needs no paid API and no server work, and the model is loaded lazily so visitors who never use it do not download it. The costs are a roughly 40 MB first download (confirmed with the user first), cutout quality limited by the small quantized model it ships, and the library's AGPL licence, which is why this project is AGPL.
+
+The full decision log is in [`docs/DECISIONS.md`](docs/DECISIONS.md).
+
+## Security
+
+- Passwords are hashed with Argon2id; login answers identically for unknown emails and wrong passwords.
+- Sessions are `httpOnly`, `SameSite=Lax` cookies (`Secure` in production), with an `Origin` check on writes and rate limits on sign-in and sign-up.
+- Every query on user data is scoped by `userId`, and another user's resource is a `404`, never a `403`.
+- Every request body and route parameter is validated with Zod, and the server refuses to boot with a missing or weak `JWT_SECRET`.
+- Uploads go direct to Cloudinary with a signature restricted to the user's own folder, and CI runs `npm audit` on both packages.
+
+Details and known limits: [SECURITY.md](SECURITY.md).
+
+## Testing and CI
+
+- **Client:** 161 tests in 11 files (Vitest), covering the pure logic: board layout, cutout geometry and mask, upload queue.
+- **Server:** Vitest + Supertest drive the real Express app against a separate `khzenty_test` Postgres database, and target invariants like per-user scoping and the derived garment category. Run with `npm run test:server` (needs the database from `compose.yaml`).
+- **CI** ([GitHub Actions](.github/workflows/ci.yml)) runs on pushes and pull requests to `main`, in two jobs. The server job uses a Postgres service container and runs migrations, typecheck, lint, tests, build and `npm audit`. The client job runs typecheck, lint, tests, build and a non-blocking `npm audit` (a known advisory in the background-removal library, documented in SECURITY.md).
+
+## Roadmap
+
 - AI outfit suggestions
-- Weather integration
+- Inspiration board
+- Server-side session revocation
+- Stronger background removal
+- Dark mode
 
-## 🛠️ Tech Stack
+Phases and reasoning are in [`docs/ROADMAP.md`](docs/ROADMAP.md).
+
+## Tech Stack
 
 ### Frontend
 
@@ -83,9 +129,9 @@ It runs locally. Deployment, packing lists and statistics are next (see the [Roa
 ### Services
 
 - Cloudinary: signed direct uploads (optional, see below)
-- GitHub Actions: typecheck, server and client tests, build
+- GitHub Actions: typecheck, lint, server and client tests, build
 
-## 🚀 Getting Started
+## Local setup
 
 ### Prerequisites
 
@@ -160,7 +206,7 @@ That request goes through the Vite dev proxy to the API, so a JSON response conf
 
 **Background removal.** The first cutout downloads about 40 MB of model files, and the app asks for confirmation before it does. The model and WASM assets are fetched from IMG.LY's CDN at runtime.
 
-## 🔐 API
+## API
 
 | Method | Path | Auth | Description |
 |---|---|---|---|
@@ -228,7 +274,93 @@ The session is an httpOnly `SameSite=Lax` cookie, so JavaScript cannot read it a
 
 Login returns the same `401 Invalid email or password` whether the email is unknown or the password is wrong, and verifies against a dummy hash when no user matches, so neither the message nor the response time reveals which emails are registered.
 
-## 🌍 Deployment
+## Scripts
+
+Run from the repo root:
+
+| Script | Description |
+|---|---|
+| `npm run dev` | Start API and web together |
+| `npm run dev:server` | Start API only |
+| `npm run dev:client` | Start web only |
+| `npm run build` | Build both packages |
+| `npm run typecheck` | Typecheck both packages |
+| `npm test` | Run both test suites (Vitest; Supertest on the server) |
+| `npm run lint` | Lint both packages (oxlint) |
+| `npm run setup` | Install dependencies in all three packages |
+| `npm run db:generate` | Regenerate the Prisma client |
+| `npm run db:migrate` | Create and apply a migration |
+| `npm run db:seed` | Load development data (idempotent). Refuses non-local databases unless `SEED_ALLOW_PRODUCTION=true` — see Deployment |
+| `npm run db:export-demo` | (in `server/`) Write the local demo account to `prisma/demo-export.json` (git-ignored); seed it with `SEED_DEMO_FILE=default` |
+| `npm run db:export-demo-photos` | (in `server/`) Write the demo template's photo links to a git-ignored JSON file |
+| `npm run db:studio` | Open Prisma Studio |
+
+## Project Structure
+
+```
+khzenty/
+├── client/                     # React + Vite frontend
+│   ├── src/
+│   │   ├── components/         # shared components
+│   │   │   └── ui/             # shadcn/ui primitives (generated)
+│   │   ├── features/           # per-feature modules
+│   │   ├── hooks/
+│   │   ├── lib/                # api client (cn() comes from the `cn` package)
+│   │   ├── pages/
+│   │   ├── types/
+│   │   ├── App.tsx
+│   │   ├── main.tsx
+│   │   └── index.css           # Tailwind entry + theme tokens
+│   ├── components.json         # shadcn/ui config
+│   └── vite.config.ts          # alias, dev proxy
+│
+├── server/                     # Express API
+│   ├── prisma/schema.prisma
+│   ├── tests/                  # Vitest + Supertest, kept out of the build
+│   └── src/
+│       ├── config/             # env validation, Prisma client
+│       ├── routes/             # HTTP surface
+│       ├── controllers/        # thin: request → service → response
+│       ├── services/           # business logic
+│       ├── middlewares/        # error handling
+│       ├── lib/
+│       ├── app.ts              # app assembly (no port binding)
+│       └── server.ts           # port binding, graceful shutdown
+│
+└── docs/
+    ├── ARCHITECTURE.md         # ERD and sequence diagrams
+    ├── ROADMAP.md              # phases, with the reasoning
+    └── DECISIONS.md            # decision log: chosen, rejected, why
+```
+
+## Engineering notes
+
+**Layering.** Requests flow route → controller → service. Controllers stay thin — they read the request, delegate, and shape the response. Business logic lives in services, which have no knowledge of `req`/`res`.
+
+**Errors.** Services throw `HttpError` for failures the client may see. One error middleware turns anything thrown into a consistent JSON shape. Unexpected errors never leak their message; they return a generic `500`.
+
+**Ownership.** Every item query takes a `userId` and applies it. `update` and `delete` go through `updateMany`/`deleteMany` filtered on `{ id, userId }` rather than reading the row and comparing, so a missing row and someone else's row are indistinguishable from outside. The seeded `second@khzenty.test` account exists to make a missed scope visible in development.
+
+**Derived state.** A garment's `type` determines its `category`, but the database stores both as independent enum columns and cannot enforce the dependency. `server/src/lib/clothing-taxonomy.ts` is the single place that relationship lives, and writes derive `category` rather than accepting it. Both columns stay populated, so category filtering remains index-backed.
+
+**Board zones.** The outfit board lays garments out by *zone*, not by category, using a separate total map over every garment type (`BOARD_ZONE_BY_TYPE`, served by `/api/taxonomy`). A category alone can't say where a sports top, a pair of socks or a bag belongs, and an unzoned type would silently drop off the board, so the map has to be total. The layout is a pure function (garments in, positions out) with its own unit tests; `object-contain` does the rest.
+
+**Cutouts.** Background removal runs in the browser and is loaded lazily, so visitors who never use it don't download it. After removal the mask is eroded to remove the dark fringe, then trimmed and centred on a square canvas and exported with alpha intact. Cutouts deliberately bypass the JPEG compression step, because JPEG has no alpha channel and would flatten the garment back onto black. Garment photos are shown on one shared background token, never baked into the file.
+
+**Configuration.** `server/src/config/env.ts` is the only place that reads `process.env`. It validates with Zod at boot, so a misconfiguration fails immediately and loudly rather than at the first request that needs the value.
+
+**Testability.** `app.ts` builds the Express app without binding a port; `server.ts` owns the port and graceful shutdown. Tests can import the app directly.
+
+**Styling.** Tailwind v4 is configured in CSS, not JavaScript — see the `@theme inline` block in `client/src/index.css`. There is no `tailwind.config.js`.
+
+**Tests.** Vitest drives the real Express app in-process through Supertest — no port binding, which is why `app.ts` and `server.ts` are separate. They run against a separate database (`khzenty_test`), created and migrated automatically on first run; the setup refuses any database whose name doesn't end in `_test`, because the helpers truncate every table. Tests live in `server/tests/` so `npm run build` never compiles them into `dist`, and are typechecked via `tsconfig.scripts.json`. The client has its own suite for the pure logic: the board layout, the cutout geometry and mask, and the upload queue.
+
+The suite deliberately targets the invariants that manual testing misses: per-user ownership scoping, and the derived category. Both were verified by mutation — removing `userId` from the service's `where` clauses fails 6 tests, and mis-mapping a garment type fails 3.
+
+
+The full decision log, with what was chosen, what was rejected and why, is in [`docs/DECISIONS.md`](docs/DECISIONS.md).
+
+## Deployment
 
 A free setup that keeps the session cookie same-origin:
 
@@ -294,23 +426,31 @@ Migrations run on every start (idempotent, and quick when there is nothing to ap
 Seeding is **manual, never part of a deploy**. The demo sandbox clones one template account (`demo@khzenty.test`); this is how it is created and refreshed.
 
 ```bash
-# 1. Once, from your development machine: export the template's photo links.
+# 1. Once, from your development machine: export the local demo account.
 cd server
-npm run db:export-demo-photos          # writes prisma/demo-photos.json (git-ignored)
+npm run db:export-demo                 # writes prisma/demo-export.json (git-ignored)
 
 # 2. Seed Neon. Use the DIRECT url. JWT_SECRET only has to be any 32+ characters here.
 DATABASE_URL='postgresql://…direct…?sslmode=require' \
 JWT_SECRET='any-placeholder-of-at-least-32-characters' \
 SEED_ALLOW_PRODUCTION=true \
-SEED_PHOTOS_FILE=default \
+SEED_DEMO_FILE=default \
 npm run db:seed
 ```
+
+`db:export-demo` reads `demo@khzenty.test` from your local database (garments with their photo links, outfits with their board layouts, trips with entries and manual counts, the wear log, laundry state) and writes it to `server/prisma/demo-export.json`. It is read-only. With `SEED_DEMO_FILE=default` (or a path) the seed builds the template from that file instead of the built-in sample data; without it, nothing changes.
+
+- **Dates are relative.** The file holds "5 days from today" and "3 days ago", never calendar dates, and the seed resolves them against the moment it runs. That is what the per-visitor copy expects, so the Dubai trip is still inside the forecast window however old the file is.
+- **The file is validated before anything is deleted.** A malformed file, a photo that is not a Cloudinary `https` link, a garment whose category does not match its type, or a reference to something not in the file stops the run with the template untouched.
+- **It holds no account data**: no email, password hash or timestamps. The file is git-ignored, and photos are links to Cloudinary, not files.
+- **Re-export after changing the dev account**, then re-run step 2.
+- `db:export-demo-photos` / `SEED_PHOTOS_FILE` still work for the built-in sample data. With a demo file they only fill in a link the file lacks.
 
 On Windows PowerShell set each variable first, e.g. `$env:SEED_ALLOW_PRODUCTION='true'`.
 
 - It refuses to run against anything that is not a local database unless `SEED_ALLOW_PRODUCTION=true` is spelled exactly, whatever `NODE_ENV` says.
 - In that mode it touches **only** the demo template: no dev accounts, other users' rows are never read or deleted, and the template gets an unusable password (the development password is public, and anyone who could sign in could edit what every demo copy is cloned from).
-- It is idempotent. Photo links already on the template are kept; `SEED_PHOTOS_FILE` only fills in missing ones, and the photos themselves stay in Cloudinary untouched.
+- It is idempotent. Photo links already on the template are kept (they win over the file's); `SEED_PHOTOS_FILE` only fills in missing ones, and the photos themselves stay in Cloudinary untouched.
 - **To refresh the demo** (new sample data, a new seed date), run the same command again. Existing visitor copies are unaffected and expire after 24 hours; new copies get the refreshed template. The template is absent for about a second while it is rebuilt, during which demo sign-in answers `404`, so run it when it is quiet.
 
 ### First test
@@ -328,105 +468,8 @@ On Windows PowerShell set each variable first, e.g. `$env:SEED_ALLOW_PRODUCTION=
 - **Neon** also suspends when idle. The API waits it out: it retries the connection (never a statement) for several seconds, so the first query after a quiet period is slower rather than failed.
 - **Keeping it awake.** A monitor such as [UptimeRobot](https://uptimerobot.com) pinging `https://<render>.onrender.com/api/health` every 5 minutes avoids Render's cold start. The health check runs `SELECT 1`, so it also keeps Neon awake and uses its free compute allowance around the clock. For a portfolio, consider enabling the monitor only around when you are showing the project.
 
-## 📜 Scripts
 
-Run from the repo root:
-
-| Script | Description |
-|---|---|
-| `npm run dev` | Start API and web together |
-| `npm run dev:server` | Start API only |
-| `npm run dev:client` | Start web only |
-| `npm run build` | Build both packages |
-| `npm run typecheck` | Typecheck both packages |
-| `npm test` | Run both test suites (Vitest; Supertest on the server) |
-| `npm run lint` | Lint both packages (oxlint) |
-| `npm run setup` | Install dependencies in all three packages |
-| `npm run db:generate` | Regenerate the Prisma client |
-| `npm run db:migrate` | Create and apply a migration |
-| `npm run db:seed` | Load development data (idempotent). Refuses non-local databases unless `SEED_ALLOW_PRODUCTION=true` — see Deployment |
-| `npm run db:export-demo-photos` | (in `server/`) Write the demo template's photo links to a git-ignored JSON file |
-| `npm run db:studio` | Open Prisma Studio |
-
-## 📁 Project Structure
-
-```
-khzenty/
-├── client/                     # React + Vite frontend
-│   ├── src/
-│   │   ├── components/         # shared components
-│   │   │   └── ui/             # shadcn/ui primitives (generated)
-│   │   ├── features/           # per-feature modules
-│   │   ├── hooks/
-│   │   ├── lib/                # api client (cn() comes from the `cn` package)
-│   │   ├── pages/
-│   │   ├── types/
-│   │   ├── App.tsx
-│   │   ├── main.tsx
-│   │   └── index.css           # Tailwind entry + theme tokens
-│   ├── components.json         # shadcn/ui config
-│   └── vite.config.ts          # alias, dev proxy
-│
-├── server/                     # Express API
-│   ├── prisma/schema.prisma
-│   ├── tests/                  # Vitest + Supertest, kept out of the build
-│   └── src/
-│       ├── config/             # env validation, Prisma client
-│       ├── routes/             # HTTP surface
-│       ├── controllers/        # thin: request → service → response
-│       ├── services/           # business logic
-│       ├── middlewares/        # error handling
-│       ├── lib/
-│       ├── app.ts              # app assembly (no port binding)
-│       └── server.ts           # port binding, graceful shutdown
-│
-└── docs/
-    ├── PROJECT_CONTEXT.md      # what this is, and the decisions on record
-    ├── TASKS.md                # done / in progress / next
-    ├── ROADMAP.md              # phases, with the reasoning
-    ├── ARCHITECTURE.md         # ERD and sequence diagrams
-    ├── DECISIONS.md            # decision log: chosen, rejected, why
-    └── IDEAS.md                # parking lot
-```
-
-## 🏛️ Architecture Notes
-
-**Layering.** Requests flow route → controller → service. Controllers stay thin — they read the request, delegate, and shape the response. Business logic lives in services, which have no knowledge of `req`/`res`.
-
-**Errors.** Services throw `HttpError` for failures the client may see. One error middleware turns anything thrown into a consistent JSON shape. Unexpected errors never leak their message; they return a generic `500`.
-
-**Ownership.** Every item query takes a `userId` and applies it. `update` and `delete` go through `updateMany`/`deleteMany` filtered on `{ id, userId }` rather than reading the row and comparing, so a missing row and someone else's row are indistinguishable from outside. The seeded `second@khzenty.test` account exists to make a missed scope visible in development.
-
-**Derived state.** A garment's `type` determines its `category`, but the database stores both as independent enum columns and cannot enforce the dependency. `server/src/lib/clothing-taxonomy.ts` is the single place that relationship lives, and writes derive `category` rather than accepting it. Both columns stay populated, so category filtering remains index-backed.
-
-**Board zones.** The outfit board lays garments out by *zone*, not by category, using a separate total map over every garment type (`BOARD_ZONE_BY_TYPE`, served by `/api/taxonomy`). A category alone can't say where a sports top, a pair of socks or a bag belongs, and an unzoned type would silently drop off the board, so the map has to be total. The layout is a pure function (garments in, positions out) with its own unit tests; `object-contain` does the rest.
-
-**Cutouts.** Background removal runs in the browser and is loaded lazily, so visitors who never use it don't download it. After removal the mask is eroded to remove the dark fringe, then trimmed and centred on a square canvas and exported with alpha intact. Cutouts deliberately bypass the JPEG compression step, because JPEG has no alpha channel and would flatten the garment back onto black. Garment photos are shown on one shared background token, never baked into the file.
-
-**Configuration.** `server/src/config/env.ts` is the only place that reads `process.env`. It validates with Zod at boot, so a misconfiguration fails immediately and loudly rather than at the first request that needs the value.
-
-**Testability.** `app.ts` builds the Express app without binding a port; `server.ts` owns the port and graceful shutdown. Tests can import the app directly.
-
-**Styling.** Tailwind v4 is configured in CSS, not JavaScript — see the `@theme inline` block in `client/src/index.css`. There is no `tailwind.config.js`.
-
-**Tests.** Vitest drives the real Express app in-process through Supertest — no port binding, which is why `app.ts` and `server.ts` are separate. They run against a separate database (`khzenty_test`), created and migrated automatically on first run; the setup refuses any database whose name doesn't end in `_test`, because the helpers truncate every table. Tests live in `server/tests/` so `npm run build` never compiles them into `dist`, and are typechecked via `tsconfig.scripts.json`. The client has its own suite for the pure logic: the board layout, the cutout geometry and mask, and the upload queue.
-
-The suite deliberately targets the invariants that manual testing misses: per-user ownership scoping, and the derived category. Both were verified by mutation — removing `userId` from the service's `where` clauses fails 6 tests, and mis-mapping a garment type fails 3.
-
-**CI.** GitHub Actions runs install, typecheck, the server tests (against a Postgres service container), the client tests, and the build on every push.
-
-The full decision log, with what was chosen, what was rejected and why, is in [`docs/DECISIONS.md`](docs/DECISIONS.md).
-
-## 🗺️ Roadmap
-
-- [x] **v1.0 — MVP:** accounts, wardrobe, photos, bulk add, cutouts, laundry, outfit board and PNG export, wear log, daily suggestion, tests, CI
-- [ ] **v1.1:** travel packing lists, wear statistics, a lint step in CI
-- [ ] **v1.2:** deployment, and changes driven by user research (for example a French and Arabic interface)
-- [ ] **Later, to validate with users:** inspiration board, size profile, drag-and-drop board, AI outfit suggestions, weather integration
-
-See [`docs/ROADMAP.md`](docs/ROADMAP.md) for detail, [`docs/TASKS.md`](docs/TASKS.md) for what is next, and [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) / [`docs/DECISIONS.md`](docs/DECISIONS.md) for how it is put together and why.
-
-## 📄 License
+## License
 
 **AGPL-3.0-or-later** — see [`LICENSE`](LICENSE).
 

@@ -13,3 +13,7 @@ npm-debug.log*
 
 # Photo links exported from the dev database for the first production seed.
 prisma/demo-photos.json
+
+# The whole demo template (garments, outfits, trips, wear log) exported from the
+# dev database, with photo links.
+prisma/demo-export.json
