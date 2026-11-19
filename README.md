@@ -15,16 +15,67 @@ Most people wear a fraction of what they own, because they cannot remember the r
 
 ## Screenshots
 
-| | |
-|:---:|:---:|
-| ![Wardrobe grid](docs/screenshots/wardrobe.png) | ![Outfit builder](docs/screenshots/Outfitbuilder.png) |
-| **Wardrobe**: photo cutouts, filters, favourites | **Outfit builder**: pick pieces, get an automatic layout |
-| ![Saved outfits](docs/screenshots/Outfitslist.png) | ![Trip detail](docs/screenshots/Trip-detail.png) |
-| **Outfits**: saved boards, worn today | **Trip**: packing list, forecast, pack-for-N-days guidance |
-| ![Laundry basket](docs/screenshots/Laundry.png) | ![Add an item](docs/screenshots/addanitem.png) |
-| **Laundry**: what is in the basket | **Add an item**: photo, type, season |
-| ![Login page](docs/screenshots/Login.png) | |
-| **Login**: with the "Try the demo" button | |
+h2>Screenshots</h2>
+
+<h3>01 — Your digital wardrobe</h3>
+
+<p align="center">
+
+  <img src="docs/screenshots/wardrobe.png" alt="Khzenty digital wardrobe" width="100%" />
+
+</p>
+
+<h3>02 — Build your outfits</h3>
+
+<p align="center">
+
+  <img src="docs/screenshots/Outfitbuilder.png" alt="Interactive outfit builder" width="100%" />
+
+</p>
+
+<table>
+
+  <tr>
+
+    <td width="50%">
+
+      <img src="docs/screenshots/Outfitslist.png" alt="Saved outfits" width="100%" />
+
+      <p align="center"><strong>Saved outfits</strong></p>
+
+    </td>
+
+    <td width="50%">
+
+      <img src="docs/screenshots/Trip-detail.png" alt="Trip planning" width="100%" />
+
+      <p align="center"><strong>Travel planning</strong></p>
+
+    </td>
+
+  </tr>
+
+  <tr>
+
+    <td width="50%">
+
+      <img src="docs/screenshots/Laundry.png" alt="Laundry tracker" width="100%" />
+
+      <p align="center"><strong>Laundry tracking</strong></p>
+
+    </td>
+
+    <td width="50%">
+
+      <img src="docs/screenshots/addanitem.png" alt="Add a clothing item" width="100%" />
+
+      <p align="center"><strong>Quick item capture</strong></p>
+
+    </td>
+
+  </tr>
+
+</table>
 
 ## Features
 
@@ -141,7 +192,7 @@ Phases and reasoning are in [`docs/ROADMAP.md`](docs/ROADMAP.md).
 ### 1. Install
 
 ```bash
-git clone <repo-url>
+git clone https://github.com/mounasmiri/khzenty.git
 cd khzenty
 npm run setup
 ```
