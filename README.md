@@ -15,67 +15,16 @@ Most people wear a fraction of what they own, because they cannot remember the r
 
 ## Screenshots
 
-h2>Screenshots</h2>
-
-<h3>01 — Your digital wardrobe</h3>
-
-<p align="center">
-
-  <img src="docs/screenshots/wardrobe.png" alt="Khzenty digital wardrobe" width="100%" />
-
-</p>
-
-<h3>02 — Build your outfits</h3>
-
-<p align="center">
-
-  <img src="docs/screenshots/Outfitbuilder.png" alt="Interactive outfit builder" width="100%" />
-
-</p>
-
-<table>
-
-  <tr>
-
-    <td width="50%">
-
-      <img src="docs/screenshots/Outfitslist.png" alt="Saved outfits" width="100%" />
-
-      <p align="center"><strong>Saved outfits</strong></p>
-
-    </td>
-
-    <td width="50%">
-
-      <img src="docs/screenshots/Trip-detail.png" alt="Trip planning" width="100%" />
-
-      <p align="center"><strong>Travel planning</strong></p>
-
-    </td>
-
-  </tr>
-
-  <tr>
-
-    <td width="50%">
-
-      <img src="docs/screenshots/Laundry.png" alt="Laundry tracker" width="100%" />
-
-      <p align="center"><strong>Laundry tracking</strong></p>
-
-    </td>
-
-    <td width="50%">
-
-      <img src="docs/screenshots/addanitem.png" alt="Add a clothing item" width="100%" />
-
-      <p align="center"><strong>Quick item capture</strong></p>
-
-    </td>
-
-  </tr>
-
-</table>
+| | |
+|:---:|:---:|
+| ![Wardrobe grid](docs/screenshots/wardrobe.png) | ![Outfit builder](docs/screenshots/Outfitbuilder.png) |
+| **Wardrobe**: photo cutouts, filters, favourites | **Outfit builder**: pick pieces, get an automatic layout |
+| ![Saved outfits](docs/screenshots/Outfitslist.png) | ![Trip detail](docs/screenshots/Trip-detail.png) |
+| **Outfits**: saved boards, worn today | **Trip**: packing list, forecast, pack-for-N-days guidance |
+| ![Laundry basket](docs/screenshots/Laundry.png) | ![Add an item](docs/screenshots/addanitem.png) |
+| **Laundry**: what is in the basket | **Add an item**: photo, type, season |
+| ![Login page](docs/screenshots/Login.png) | |
+| **Login**: with the "Try the demo" button | |
 
 ## Features
 
@@ -192,7 +141,7 @@ Phases and reasoning are in [`docs/ROADMAP.md`](docs/ROADMAP.md).
 ### 1. Install
 
 ```bash
-git clone https://github.com/mounasmiri/khzenty.git
+git clone <repo-url>
 cd khzenty
 npm run setup
 ```
@@ -408,7 +357,6 @@ khzenty/
 
 The suite deliberately targets the invariants that manual testing misses: per-user ownership scoping, and the derived category. Both were verified by mutation — removing `userId` from the service's `where` clauses fails 6 tests, and mis-mapping a garment type fails 3.
 
-
 The full decision log, with what was chosen, what was rejected and why, is in [`docs/DECISIONS.md`](docs/DECISIONS.md).
 
 ## Deployment
@@ -518,7 +466,6 @@ On Windows PowerShell set each variable first, e.g. `$env:SEED_ALLOW_PRODUCTION=
 - **Cold starts.** Render's free web service sleeps after about 15 minutes without traffic, and the first request afterwards takes **30–60 seconds**. Vercel's rewrite may give up before Render has woken, so the very first page load can show an error; reloading a minute later works.
 - **Neon** also suspends when idle. The API waits it out: it retries the connection (never a statement) for several seconds, so the first query after a quiet period is slower rather than failed.
 - **Keeping it awake.** A monitor such as [UptimeRobot](https://uptimerobot.com) pinging `https://<render>.onrender.com/api/health` every 5 minutes avoids Render's cold start. The health check runs `SELECT 1`, so it also keeps Neon awake and uses its free compute allowance around the clock. For a portfolio, consider enabling the monitor only around when you are showing the project.
-
 
 ## License
 
